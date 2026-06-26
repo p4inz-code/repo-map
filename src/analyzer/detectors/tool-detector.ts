@@ -12,9 +12,10 @@ const TOOL_PATTERNS: ToolPattern[] = [
   {
     name: 'GitHub Actions',
     check: (files) => {
-      const match = files.find((f) =>
-        f.relativePath.replace(/\\/g, '/').startsWith('.github/workflows/'),
-      );
+      const match = files.find((f) => {
+        const normalized = f.relativePath.replace(/[\\/]/g, '/');
+        return normalized.startsWith('.github/workflows/');
+      });
       return match ? `Found ${match.relativePath}` : null;
     },
   },
@@ -60,7 +61,66 @@ const TOOL_PATTERNS: ToolPattern[] = [
       return match ? `Found ${match.relativePath}` : null;
     },
   },
+  // Build tools
+  {
+    name: 'Vite',
+    check: (files) => {
+      const match = files.find(
+        (f) =>
+          f.relativePath === 'vite.config.ts' ||
+          f.relativePath === 'vite.config.js' ||
+          f.relativePath === 'vite.config.mts' ||
+          f.relativePath === 'vite.config.mjs',
+      );
+      return match ? `Found ${match.relativePath}` : null;
+    },
+  },
+  {
+    name: 'Webpack',
+    check: (files) => {
+      const match = files.find(
+        (f) =>
+          f.relativePath === 'webpack.config.js' ||
+          f.relativePath === 'webpack.config.ts' ||
+          f.relativePath === 'webpack.common.js' ||
+          f.relativePath === 'webpack.dev.js' ||
+          f.relativePath === 'webpack.prod.js',
+      );
+      return match ? `Found ${match.relativePath}` : null;
+    },
+  },
+  {
+    name: 'Rollup',
+    check: (files) => {
+      const match = files.find(
+        (f) =>
+          f.relativePath === 'rollup.config.js' ||
+          f.relativePath === 'rollup.config.ts' ||
+          f.relativePath === 'rollup.config.mjs',
+      );
+      return match ? `Found ${match.relativePath}` : null;
+    },
+  },
+  {
+    name: 'Parcel',
+    check: (files) => {
+      const match = files.find(
+        (f) => f.relativePath === '.parcelrc' || f.relativePath === 'parcel.config.json',
+      );
+      return match ? `Found ${match.relativePath}` : null;
+    },
+  },
   // Package managers
+  {
+    name: 'npm',
+    check: (files) => {
+      const match = files.find(
+        (f) =>
+          f.relativePath === 'package-lock.json',
+      );
+      return match ? `Found ${match.relativePath}` : null;
+    },
+  },
   {
     name: 'Yarn',
     check: (files) => {
@@ -73,6 +133,27 @@ const TOOL_PATTERNS: ToolPattern[] = [
     check: (files) => {
       const match = files.find(
         (f) => f.relativePath === 'pnpm-lock.yaml',
+      );
+      return match ? `Found ${match.relativePath}` : null;
+    },
+  },
+  // Monorepo tools
+  {
+    name: 'Turbo',
+    check: (files) => {
+      const match = files.find(
+        (f) =>
+          f.relativePath === 'turbo.json',
+      );
+      return match ? `Found ${match.relativePath}` : null;
+    },
+  },
+  {
+    name: 'Nx',
+    check: (files) => {
+      const match = files.find(
+        (f) =>
+          f.relativePath === 'nx.json',
       );
       return match ? `Found ${match.relativePath}` : null;
     },
@@ -116,7 +197,63 @@ const TOOL_PATTERNS: ToolPattern[] = [
         : null;
     },
   },
-  // Documentation
+  // Testing frameworks
+  {
+    name: 'Vitest',
+    check: (files) => {
+      const match = files.find(
+        (f) =>
+          f.relativePath === 'vitest.config.ts' ||
+          f.relativePath === 'vitest.config.js' ||
+          f.relativePath === 'vitest.config.mts' ||
+          f.relativePath === 'vitest.config.mjs',
+      );
+      return match ? `Found ${match.relativePath}` : null;
+    },
+  },
+  {
+    name: 'Jest',
+    check: (files) => {
+      const match = files.find(
+        (f) =>
+          f.relativePath === 'jest.config.js' ||
+          f.relativePath === 'jest.config.ts' ||
+          f.relativePath === 'jest.config.mjs' ||
+          f.relativePath === 'jest.config.cjs' ||
+          f.relativePath === 'jest.config.json',
+      );
+      return match ? `Found ${match.relativePath}` : null;
+    },
+  },
+  // E2E testing
+  {
+    name: 'Cypress',
+    check: (files) => {
+      const match = files.find(
+        (f) =>
+          f.relativePath === 'cypress.config.js' ||
+          f.relativePath === 'cypress.config.ts' ||
+          f.relativePath === 'cypress.config.mjs' ||
+          f.relativePath === 'cypress.config.cjs' ||
+          f.relativePath.startsWith('cypress/'),
+      );
+      return match ? `Found ${match.relativePath}` : null;
+    },
+  },
+  {
+    name: 'Playwright',
+    check: (files) => {
+      const match = files.find(
+        (f) =>
+          f.relativePath === 'playwright.config.ts' ||
+          f.relativePath === 'playwright.config.js' ||
+          f.relativePath === 'playwright.config.mjs' ||
+          f.relativePath === 'playwright.config.mts',
+      );
+      return match ? `Found ${match.relativePath}` : null;
+    },
+  },
+  // Storybook
   {
     name: 'Storybook',
     check: (files) => {
@@ -127,7 +264,9 @@ const TOOL_PATTERNS: ToolPattern[] = [
           f.relativePath.endsWith('.stories.js') ||
           f.relativePath.endsWith('.stories.jsx') ||
           f.relativePath.endsWith('.story.ts') ||
-          f.relativePath.endsWith('.story.tsx'),
+          f.relativePath.endsWith('.story.tsx') ||
+          f.relativePath === '.storybook/main.js' ||
+          f.relativePath === '.storybook/main.ts',
       );
       return match ? `Found ${match.relativePath}` : null;
     },

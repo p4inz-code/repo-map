@@ -6,6 +6,7 @@ import { analyze } from './analyzer/index.js';
 import { formatJson } from './formatters/json.js';
 import { formatMarkdown } from './formatters/markdown.js';
 import { formatStats, formatStatsJson } from './formatters/stats.js';
+import { fileCache } from './file-cache.js';
 
 /**
  * Main pipeline: scan → analyze → format → output.
@@ -14,6 +15,15 @@ import { formatStats, formatStatsJson } from './formatters/stats.js';
  */
 export async function run(argv: string[]): Promise<string> {
   const options = parseCliArgs(argv);
+  const startTime = performance.now();
+
+  // Apply --no-color
+  if (!options.color) {
+    process.env.NO_COLOR = '1';
+  }
+
+  // Clear file cache from any previous runs (defensive)
+  fileCache.clear();
 
   const rootPath = path.resolve(options.path);
 
@@ -35,6 +45,10 @@ export async function run(argv: string[]): Promise<string> {
     );
   }
 
+  // Scanning indicator (single line, no spinner — professional and clean)
+  const projectLabel = path.basename(rootPath);
+  process.stderr.write(`Scanning ${projectLabel}... `);
+
   // 1. Scan directory
   const scanResult = await scanDirectory({
     rootPath,
@@ -44,15 +58,19 @@ export async function run(argv: string[]): Promise<string> {
     includePatterns: options.include,
   });
 
+  process.stderr.write(`${scanResult.stats.totalFiles} files, ${scanResult.stats.totalDirectories} directories.\n`);
+  process.stderr.write('Analyzing... ');
+
   // 2. Analyze (skip tree/architecture when only stats are needed)
   const analysis = await analyze({
     files: scanResult.files,
     rootPath,
-    totalFiles: scanResult.stats.totalFiles,
-    totalDirectories: scanResult.stats.totalDirectories,
-    totalSize: scanResult.stats.totalSize,
+    stats: scanResult.stats,
     skipOutputGeneration: options.stats,
   });
+
+  const elapsed = ((performance.now() - startTime) / 1000).toFixed(1);
+  process.stderr.write(`Done in ${elapsed}s.\n`);
 
   // 3. Format
   // --stats takes precedence over --json and --output
@@ -76,4 +94,3 @@ export async function run(argv: string[]): Promise<string> {
 
   return output;
 }
-

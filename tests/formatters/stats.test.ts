@@ -1,24 +1,25 @@
 import { describe, it, expect } from 'vitest';
 import { formatStats, formatStatsJson } from '../../src/formatters/stats.js';
+import { createBaseAnalysis } from '../helpers.js';
 import type { Analysis, Technology } from '../../src/types.js';
 
 function makeAnalysis(overrides: Partial<Analysis> = {}): Analysis {
-  return {
-    schemaVersion: '1.0.0',
-    projectName: 'test-project',
-    generatedAt: '2025-01-01T00:00:00.000Z',
-    cliVersion: '0.1.0',
+  return createBaseAnalysis({
     stats: {
       totalFiles: 100,
       totalDirectories: 20,
       totalSize: 1024000,
       scannedPath: '/tmp/test',
+      maxDepth: 4,
+      avgFilesPerDirectory: 5,
+      largestDirectory: 'src',
+      largestDirectoryFiles: 50,
+      largestFile: 'src/index.ts',
+      largestFileSize: 10240,
     },
     technologies: [],
-    tree: '',
-    architecture: '',
     ...overrides,
-  };
+  });
 }
 
 function lang(name: string, count: number): Technology {
@@ -64,7 +65,11 @@ describe('formatStats', () => {
 
   it('handles zero files gracefully', () => {
     const analysis = makeAnalysis({
-      stats: { totalFiles: 0, totalDirectories: 0, totalSize: 0, scannedPath: '/tmp/test' },
+      stats: {
+        totalFiles: 0, totalDirectories: 0, totalSize: 0, scannedPath: '/tmp/test',
+        maxDepth: 0, avgFilesPerDirectory: 0, largestDirectory: '', largestDirectoryFiles: 0,
+        largestFile: '', largestFileSize: 0,
+      },
       technologies: [],
     });
     const result = formatStats(analysis);

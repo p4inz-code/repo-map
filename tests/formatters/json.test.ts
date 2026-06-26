@@ -1,18 +1,25 @@
 import { describe, it, expect } from 'vitest';
 import { formatJson } from '../../src/formatters/json.js';
+import { createBaseAnalysis } from '../helpers.js';
 import type { Analysis } from '../../src/types.js';
 
 function createMockAnalysis(overrides: Partial<Analysis> = {}): Analysis {
-  return {
+  return createBaseAnalysis({
     schemaVersion: '1.0.0',
     projectName: 'test-project',
     generatedAt: '2025-01-01T00:00:00.000Z',
-    cliVersion: '0.1.0',
+    cliVersion: '0.2.3',
     stats: {
       totalFiles: 5,
       totalDirectories: 2,
       totalSize: 1024,
       scannedPath: '/tmp/test',
+      maxDepth: 2,
+      avgFilesPerDirectory: 2.5,
+      largestDirectory: 'src',
+      largestDirectoryFiles: 3,
+      largestFile: 'src/index.ts',
+      largestFileSize: 512,
     },
     technologies: [
       {
@@ -25,7 +32,7 @@ function createMockAnalysis(overrides: Partial<Analysis> = {}): Analysis {
     tree: 'src/\n├── index.ts\n└── cli.ts\n',
     architecture: '# Test Project\n\nA test project.',
     ...overrides,
-  };
+  });
 }
 
 describe('formatJson', () => {
@@ -43,11 +50,14 @@ describe('formatJson', () => {
     expect(parsed.schemaVersion).toBe('1.0.0');
     expect(parsed.projectName).toBe('test-project');
     expect(parsed.generatedAt).toBe('2025-01-01T00:00:00.000Z');
-    expect(parsed.cliVersion).toBe('0.1.0');
+    expect(parsed.cliVersion).toBe('0.3.0');
     expect(parsed.stats).toBeDefined();
     expect(parsed.technologies).toHaveLength(1);
     expect(parsed.tree).toBeDefined();
     expect(parsed.architecture).toBeDefined();
+    expect(parsed.intelligence).toBeDefined();
+    expect(parsed.intelligence.classification).toBeDefined();
+    expect(parsed.intelligence.health).toBeDefined();
   });
 
   it('pretty-prints with 2-space indentation', () => {

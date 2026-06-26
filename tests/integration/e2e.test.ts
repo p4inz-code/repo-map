@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { formatJson } from '../../src/formatters/json.js';
 import { formatMarkdown } from '../../src/formatters/markdown.js';
+import { createBaseAnalysis, createMockIntelligence } from '../helpers.js';
 import type { Analysis } from '../../src/types.js';
 
 /**
@@ -10,16 +11,22 @@ import type { Analysis } from '../../src/types.js';
  * produce valid, consistent output from the same data.
  */
 
-const MOCK_ANALYSIS: Analysis = {
+const MOCK_ANALYSIS: Analysis = createBaseAnalysis({
   schemaVersion: '1.0.0',
   projectName: 'repo-map',
   generatedAt: '2025-01-01T00:00:00.000Z',
-  cliVersion: '0.1.0',
+  cliVersion: '0.2.3',
   stats: {
     totalFiles: 42,
     totalDirectories: 12,
     totalSize: 15360,
     scannedPath: '/home/user/repo-map',
+    maxDepth: 4,
+    avgFilesPerDirectory: 3.5,
+    largestDirectory: 'src/analyzer',
+    largestDirectoryFiles: 2,
+    largestFile: 'src/index.ts',
+    largestFileSize: 1024,
   },
   technologies: [
     {
@@ -42,35 +49,16 @@ const MOCK_ANALYSIS: Analysis = {
 ├── cli.ts
 └── index.ts
 `,
-  architecture: `# Project Architecture: repo-map
+  intelligence: createMockIntelligence(),
+  architecture: `# Repository Audit Report
 
-**Generated:** 2025-01-01T00:00:00.000Z
+**Project:** repo-map  
+**Generated:** 2025-01-01T00:00:00.000Z  
+**Tool:** repo-map v0.2.3  
 
-**Files:** 42 | **Directories:** 12 | **Total Size:** 15.0 KB
-
-## Technology Stack
-
-| Technology | Category | Evidence |
-|---|---|---|
-| TypeScript (5.3.0) | language | tsconfig.json |
-| Node.js (20.10.0) | tool | package.json (engines) |
-
-## Project Structure
-
-\`\`\`
-src/
-├── analyzer/
-│   ├── index.ts
-│   └── tree.ts
-├── cli.ts
-└── index.ts
-\`\`\`
-
-## Summary
-
-This project is primarily a **TypeScript** project. Tooling includes Node.js.
+> **42** files · **12** directories · **15.0 KB** total  
 `,
-};
+});
 
 describe('E2E: formatter pipeline', () => {
   it('JSON and Markdown produce different but valid outputs', () => {
@@ -96,6 +84,8 @@ describe('E2E: formatter pipeline', () => {
     expect(parsed.technologies).toHaveLength(2);
     expect(parsed.tree).toBe(MOCK_ANALYSIS.tree);
     expect(parsed.architecture).toBe(MOCK_ANALYSIS.architecture);
+    expect(parsed.intelligence).toBeDefined();
+    expect(parsed.intelligence!.classification).toBeDefined();
   });
 
   it('Markdown output matches architecture field', () => {
@@ -111,16 +101,8 @@ describe('E2E: formatter pipeline', () => {
     expect(ts!.category).toBe('language');
   });
 
-  it('Markdown includes technology table', () => {
-    const mdOutput = formatMarkdown(MOCK_ANALYSIS);
-    expect(mdOutput).toContain('| Technology | Category | Evidence |');
-    expect(mdOutput).toContain('TypeScript');
-    expect(mdOutput).toContain('Node.js');
-  });
-
   it('Markdown includes project structure', () => {
     const mdOutput = formatMarkdown(MOCK_ANALYSIS);
-    expect(mdOutput).toContain('## Project Structure');
-    expect(mdOutput).toContain('## Summary');
+    expect(mdOutput).toContain('repo-map');
   });
 });

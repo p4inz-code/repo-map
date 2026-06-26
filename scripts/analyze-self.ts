@@ -9,9 +9,7 @@ async function main() {
   const analysis = await analyze({
     files: scanResult.files,
     rootPath: scanResult.rootPath,
-    totalFiles: scanResult.stats.totalFiles,
-    totalDirectories: scanResult.stats.totalDirectories,
-    totalSize: scanResult.stats.totalSize,
+    stats: scanResult.stats,
   });
 
   // Print JSON

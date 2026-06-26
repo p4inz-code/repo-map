@@ -3,46 +3,110 @@ import type { Technology, FileEntry } from '../../types.js';
 import path from 'node:path';
 
 const LANGUAGE_BY_EXTENSION: Record<string, string> = {
+  // TypeScript
   '.ts': 'TypeScript',
   '.tsx': 'TypeScript',
   '.mts': 'TypeScript',
   '.cts': 'TypeScript',
+  // JavaScript
   '.js': 'JavaScript',
   '.jsx': 'JavaScript',
   '.mjs': 'JavaScript',
   '.cjs': 'JavaScript',
-  '.vue': 'Vue',
-  '.svelte': 'Svelte',
-  '.astro': 'Astro',
+  // Python
   '.py': 'Python',
-  '.rs': 'Rust',
-  '.go': 'Go',
+  '.pyw': 'Python',
+  '.pyx': 'Python',
+  '.ipynb': 'Jupyter Notebook',
+  // Java
   '.java': 'Java',
-  '.rb': 'Ruby',
-  '.php': 'PHP',
-  '.cs': 'C#',
-  '.swift': 'Swift',
+  '.jar': 'Java',
+  // Kotlin
   '.kt': 'Kotlin',
   '.kts': 'Kotlin',
-  '.scala': 'Scala',
+  // C
   '.c': 'C',
   '.h': 'C/C++ Header',
+  // C++
   '.cpp': 'C++',
   '.hpp': 'C++',
   '.cc': 'C++',
   '.cxx': 'C++',
   '.hh': 'C++',
+  '.ixx': 'C++',
+  // C#
+  '.cs': 'C#',
+  '.csx': 'C#',
+  // Rust
+  '.rs': 'Rust',
+  '.rlib': 'Rust',
+  // Go
+  '.go': 'Go',
+  // PHP
+  '.php': 'PHP',
+  '.phtml': 'PHP',
+  // Ruby
+  '.rb': 'Ruby',
+  '.erb': 'Ruby',
+  '.rake': 'Ruby',
+  '.gemspec': 'Ruby',
+  // Swift
+  '.swift': 'Swift',
+  // Dart
   '.dart': 'Dart',
+  // HTML
+  '.html': 'HTML',
+  '.htm': 'HTML',
+  '.xhtml': 'HTML',
+  // CSS
+  '.css': 'CSS',
+  // SCSS
+  '.scss': 'SCSS',
+  // Less
+  '.less': 'Less',
+  // SQL
+  '.sql': 'SQL',
+  // Shell
+  '.sh': 'Shell',
+  '.bash': 'Shell',
+  '.zsh': 'Shell',
+  '.ksh': 'Shell',
+  '.fish': 'Shell',
+  // PowerShell
+  '.ps1': 'PowerShell',
+  '.psm1': 'PowerShell',
+  '.psd1': 'PowerShell',
+  // YAML
+  '.yaml': 'YAML',
+  '.yml': 'YAML',
+  // TOML
+  '.toml': 'TOML',
+  // JSON
+  '.json': 'JSON',
+  '.jsonc': 'JSON',
+  '.json5': 'JSON',
+  // Markdown
+  '.md': 'Markdown',
+  '.mdx': 'Markdown',
+  '.markdown': 'Markdown',
+  // Other known extensions
+  '.vue': 'Vue',
+  '.svelte': 'Svelte',
+  '.astro': 'Astro',
   '.ex': 'Elixir',
   '.exs': 'Elixir',
   '.erl': 'Erlang',
+  '.hrl': 'Erlang',
   '.hs': 'Haskell',
   '.lhs': 'Haskell',
   '.clj': 'Clojure',
   '.cljs': 'ClojureScript',
+  '.cljc': 'Clojure',
+  '.edn': 'Clojure',
   '.fs': 'F#',
   '.fsx': 'F#',
-  '.sql': 'SQL',
+  '.scala': 'Scala',
+  '.sc': 'Scala',
   '.r': 'R',
   '.rmd': 'R',
   '.lua': 'Lua',
@@ -51,38 +115,40 @@ const LANGUAGE_BY_EXTENSION: Record<string, string> = {
   '.pl': 'Perl',
   '.pm': 'Perl',
   '.t': 'Perl',
-  '.yaml': 'YAML',
-  '.yml': 'YAML',
-  '.json': 'JSON',
-  '.jsonc': 'JSON',
   '.xml': 'XML',
-  '.md': 'Markdown',
-  '.mdx': 'Markdown',
-  '.css': 'CSS',
-  '.scss': 'SCSS',
-  '.sass': 'Sass',
-  '.less': 'Less',
-  '.html': 'HTML',
-  '.htm': 'HTML',
-  '.sh': 'Shell',
-  '.bash': 'Shell',
-  '.zsh': 'Shell',
-  '.ps1': 'PowerShell',
-  '.bat': 'Batch',
-  '.cmd': 'Batch',
-  '.tf': 'Terraform',
-  '.tfstate': 'Terraform',
-  '.dockerfile': 'Docker',
+  '.svg': 'SVG',
   '.proto': 'Protocol Buffers',
   '.graphql': 'GraphQL',
   '.gql': 'GraphQL',
   '.prisma': 'Prisma',
+  '.tf': 'Terraform',
+  '.tfstate': 'Terraform',
+  '.dockerfile': 'Docker',
+  // Batch
+  '.bat': 'Batch',
+  '.cmd': 'Batch',
+  // Solid
+  '.sol': 'Solidity',
+  // Latex
+  '.tex': 'LaTeX',
+  '.sty': 'LaTeX',
+  '.cls': 'LaTeX',
+  // Config
+  '.ini': 'INI',
+  '.cfg': 'INI',
+  '.conf': 'INI',
+  // Make
+  '.mk': 'Make',
 };
 
 const LANGUAGE_BY_FILENAME: Record<string, string> = {
   Dockerfile: 'Docker',
   Makefile: 'Make',
   'CMakeLists.txt': 'CMake',
+  'Cargo.toml': 'TOML',
+  'composer.json': 'JSON',
+  '.env': 'Environment Variables',
+  '.env.example': 'Environment Variables',
 };
 
 /**
@@ -96,7 +162,7 @@ export function detectLanguagesFromFiles(
     string,
     { count: number; extensions: Set<string> }
   > = {};
-  const languageByFilename: Record<string, string> = {};
+  const filenameLanguages: Record<string, string> = {};
 
   for (const file of files) {
     if (file.isDirectory) continue;
@@ -106,7 +172,7 @@ export function detectLanguagesFromFiles(
     // Check by filename first (e.g. Dockerfile)
     const filenameLanguage = LANGUAGE_BY_FILENAME[basename];
     if (filenameLanguage) {
-      languageByFilename[filenameLanguage] = file.relativePath;
+      filenameLanguages[filenameLanguage] = file.relativePath;
       continue;
     }
 
@@ -125,7 +191,7 @@ export function detectLanguagesFromFiles(
   const technologies: Technology[] = [];
 
   // Add filename-based technologies first
-  for (const [lang, filepath] of Object.entries(languageByFilename)) {
+  for (const [lang, filepath] of Object.entries(filenameLanguages)) {
     technologies.push({
       name: lang,
       category: 'language',
@@ -147,7 +213,7 @@ export function detectLanguagesFromFiles(
       name: language,
       category: 'language',
       count: info.count,
-      evidence: `Found ${info.count} .${exts} file${info.count > 1 ? 's' : ''}`,
+      evidence: `Found ${info.count} file${info.count > 1 ? 's' : ''} (${exts})`,
     });
   }
 

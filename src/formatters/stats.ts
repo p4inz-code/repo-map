@@ -1,11 +1,10 @@
 import type { Analysis } from '../types.js';
-import { formatSize } from '../analyzer/architecture.js';
+import { formatSize } from '../utils.js';
 
 /**
  * Formats an Analysis result as a compact statistics summary.
  *
- * Shows file/directory counts, total size, and language breakdown
- * using the structured `count` field on Technology objects.
+ * Shows file/directory counts, total size, depth, and language breakdown.
  */
 export function formatStats(analysis: Analysis): string {
   const { stats, technologies } = analysis;
@@ -13,8 +12,9 @@ export function formatStats(analysis: Analysis): string {
 
   // Header
   lines.push(
-    `Files: ${stats.totalFiles}  |  Dirs: ${stats.totalDirectories}  |  Size: ${formatSize(stats.totalSize)}`,
+    `Files: ${stats.totalFiles}  |  Dirs: ${stats.totalDirectories}  |  Size: ${formatSize(stats.totalSize)}  |  Depth: ${stats.maxDepth}`,
   );
+  lines.push('');
 
   // Language breakdown
   const languages = technologies.filter(
@@ -30,11 +30,24 @@ export function formatStats(analysis: Analysis): string {
         stats.totalFiles > 0
           ? ((lang.count / stats.totalFiles) * 100).toFixed(1)
           : '0.0';
-      const paddedName = lang.name.padEnd(16);
+      const paddedName = lang.name.padEnd(20);
       const paddedCount = String(lang.count).padStart(6);
       const paddedPct = pct.padStart(5);
       lines.push(`${paddedName}${paddedCount} files  (${paddedPct}%)`);
     }
+  }
+
+  lines.push('');
+
+  // Additional stats
+  if (stats.largestFile) {
+    lines.push(`Largest file:    ${stats.largestFile} (${formatSize(stats.largestFileSize)})`);
+  }
+  if (stats.largestDirectory) {
+    lines.push(`Largest dir:     ${stats.largestDirectory} (${stats.largestDirectoryFiles} files)`);
+  }
+  if (stats.avgFilesPerDirectory > 0) {
+    lines.push(`Avg files/dir:   ${stats.avgFilesPerDirectory}`);
   }
 
   return lines.join('\n') + '\n';
@@ -69,6 +82,12 @@ export function formatStatsJson(analysis: Analysis): string {
     totalFiles: stats.totalFiles,
     totalDirectories: stats.totalDirectories,
     totalSize: stats.totalSize,
+    maxDepth: stats.maxDepth,
+    avgFilesPerDirectory: stats.avgFilesPerDirectory,
+    largestDirectory: stats.largestDirectory,
+    largestDirectoryFiles: stats.largestDirectoryFiles,
+    largestFile: stats.largestFile,
+    largestFileSize: stats.largestFileSize,
     generatedAt,
     languages,
   };

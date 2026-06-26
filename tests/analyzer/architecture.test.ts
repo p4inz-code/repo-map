@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { generateArchitecture, formatSize } from '../../src/analyzer/architecture.js';
-import type { Technology } from '../../src/types.js';
+import { generateArchitecture } from '../../src/analyzer/architecture.js';
+import { formatSize } from '../../src/utils.js';
+import { createMockIntelligence } from '../helpers.js';
+import type { Technology, Intelligence } from '../../src/types.js';
 
 describe('formatSize', () => {
   it('formats bytes', () => {
@@ -31,11 +33,23 @@ describe('generateArchitecture', () => {
     totalDirectories: 3,
     totalSize: 10240,
     generatedAt: '2026-06-24T12:00:00.000Z',
-    cliVersion: '0.1.0',
+    cliVersion: '0.3.0',
     tree: 'src/\n├── index.ts\n└── cli.ts\n',
+    stats: {
+      totalFiles: 10,
+      totalDirectories: 3,
+      totalSize: 10240,
+      maxDepth: 2,
+      avgFilesPerDirectory: 3.3,
+      largestDirectory: 'src',
+      largestDirectoryFiles: 2,
+      largestFile: 'src/index.ts',
+      largestFileSize: 100,
+    },
+    intelligence: createMockIntelligence(),
   };
 
-  function makeInput(overrides: Partial<typeof baseInput> & { technologies?: Technology[] }) {
+  function makeInput(overrides: Partial<typeof baseInput> & { technologies?: Technology[]; intelligence?: Intelligence }) {
     return { ...baseInput, technologies: overrides.technologies ?? [], ...overrides };
   }
 
@@ -46,9 +60,7 @@ describe('generateArchitecture', () => {
 
   it('includes file and directory counts', () => {
     const result = generateArchitecture(makeInput({}));
-    expect(result).toContain('**Files:** 10');
-    expect(result).toContain('**Directories:** 3');
-    expect(result).toContain('10.0 KB');
+    expect(result).toContain('> **10** files · **3** directories · **10.0 KB** total');
   });
 
   it('includes the ASCII tree in a code block', () => {
@@ -65,14 +77,14 @@ describe('generateArchitecture', () => {
       { name: 'Docker', category: 'tool', evidence: 'Found Dockerfile' },
     ];
     const result = generateArchitecture(makeInput({ technologies }));
-    expect(result).toContain('## Technology Stack');
+    expect(result).toContain('Technology Stack');
     expect(result).toContain('| TypeScript | language | Found 5 .ts files |');
     expect(result).toContain('| Docker | tool | Found Dockerfile |');
   });
 
   it('skips technology stack section when no technologies', () => {
     const result = generateArchitecture(makeInput({ technologies: [] }));
-    expect(result).not.toContain('## Technology Stack');
+    expect(result).not.toContain('Technology Stack');
   });
 
   it('sorts technologies: languages first, then frameworks, then tools', () => {
@@ -89,17 +101,6 @@ describe('generateArchitecture', () => {
     expect(tableLines[1]).toContain('TypeScript');
     expect(tableLines[2]).toContain('React');
     expect(tableLines[3]).toContain('Docker');
-  });
-
-  it('generates summary section when technologies exist', () => {
-    const technologies: Technology[] = [
-      { name: 'TypeScript', category: 'language', evidence: 'Found 5 .ts files' },
-      { name: 'React', category: 'framework', evidence: 'Found in package.json' },
-    ];
-    const result = generateArchitecture(makeInput({ technologies }));
-    expect(result).toContain('## Summary');
-    expect(result).toContain('TypeScript');
-    expect(result).toContain('React');
   });
 
   it('includes version in technology table when available', () => {
@@ -119,5 +120,16 @@ describe('generateArchitecture', () => {
     const result = generateArchitecture(makeInput({ technologies }));
     expect(result).toContain('Tech0');
     expect(result).toContain('Tech19');
+  });
+
+  it('includes project classification section', () => {
+    const result = generateArchitecture(makeInput({}));
+    expect(result).toContain('## 1. Project Classification');
+  });
+
+  it('includes health score section', () => {
+    const result = generateArchitecture(makeInput({}));
+    expect(result).toContain('Codebase Health Score');
+    expect(result).toContain('50/100');
   });
 });

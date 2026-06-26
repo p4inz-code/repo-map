@@ -1,24 +1,31 @@
 import { describe, it, expect } from 'vitest';
 import { formatMarkdown } from '../../src/formatters/markdown.js';
+import { createBaseAnalysis } from '../helpers.js';
 import type { Analysis } from '../../src/types.js';
 
 function createMockAnalysis(overrides: Partial<Analysis> = {}): Analysis {
-  return {
+  return createBaseAnalysis({
     schemaVersion: '1.0.0',
     projectName: 'test-project',
     generatedAt: '2025-01-01T00:00:00.000Z',
-    cliVersion: '0.1.0',
+    cliVersion: '0.2.3',
     stats: {
       totalFiles: 5,
       totalDirectories: 2,
       totalSize: 1024,
       scannedPath: '/tmp/test',
+      maxDepth: 2,
+      avgFilesPerDirectory: 2.5,
+      largestDirectory: 'src',
+      largestDirectoryFiles: 3,
+      largestFile: 'src/index.ts',
+      largestFileSize: 512,
     },
     technologies: [],
     tree: 'src/\n├── index.ts\n└── cli.ts\n',
     architecture: '# Project Architecture: test-project\n\nA sample architecture.',
     ...overrides,
-  };
+  });
 }
 
 describe('formatMarkdown', () => {

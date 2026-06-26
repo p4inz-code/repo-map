@@ -5,7 +5,7 @@ import {
   createIncludeFilter,
 } from './ignore.js';
 import { walkDirectory } from './file-walker.js';
-import type { FileEntry, ScanResult } from '../types.js';
+import type { FileEntry, ScanResult, ScanStats } from '../types.js';
 
 export interface ScannerOptions {
   rootPath: string;
@@ -50,6 +50,78 @@ function applyIncludeFilter(
   });
 }
 
+/**
+ * Computes enhanced statistics from the scanned file list.
+ */
+function computeScanStats(files: FileEntry[]): ScanStats {
+  const fileEntries = files.filter((f) => !f.isDirectory);
+  const dirEntries = files.filter((f) => f.isDirectory);
+  const totalFiles = fileEntries.length;
+  const totalDirectories = dirEntries.length;
+  const totalSize = files.reduce((sum, f) => sum + f.size, 0);
+
+  // Compute max depth
+  let maxDepth = 0;
+  for (const f of files) {
+    const normalized = f.relativePath.replace(/\\/g, '/');
+    const depth = normalized.split('/').length - 1;
+    if (depth > maxDepth) maxDepth = depth;
+  }
+
+  // Compute avg files per directory.
+  // When there are file entries but no directory entries (all files at root),
+  // treat root as one directory so avg = totalFiles / 1.
+  const effectiveDirectories = totalDirectories > 0 ? totalDirectories : (totalFiles > 0 ? 1 : 0);
+  const avgFilesPerDirectory =
+    effectiveDirectories > 0
+      ? Math.round((totalFiles / effectiveDirectories) * 10) / 10
+      : 0;
+
+  // Find largest directory (by file count)
+  // Build a map of directory paths to file counts
+  const dirFileCounts = new Map<string, number>();
+  for (const f of fileEntries) {
+    const normalized = f.relativePath.replace(/\\/g, '/');
+    const parts = normalized.split('/');
+    // Add a file to every parent directory
+    for (let i = 0; i < parts.length - 1; i++) {
+      const dirPath = parts.slice(0, i + 1).join('/');
+      dirFileCounts.set(dirPath, (dirFileCounts.get(dirPath) || 0) + 1);
+    }
+  }
+
+  let largestDir = '';
+  let largestDirCount = 0;
+  for (const [dirPath, count] of dirFileCounts) {
+    if (count > largestDirCount) {
+      largestDirCount = count;
+      largestDir = dirPath;
+    }
+  }
+
+  // Find largest file
+  let largestFile = '';
+  let largestFileSize = 0;
+  for (const f of fileEntries) {
+    if (f.size > largestFileSize) {
+      largestFileSize = f.size;
+      largestFile = f.relativePath.replace(/\\/g, '/');
+    }
+  }
+
+  return {
+    totalFiles,
+    totalDirectories,
+    totalSize,
+    maxDepth,
+    avgFilesPerDirectory,
+    largestDirectory: largestDir,
+    largestDirectoryFiles: largestDirCount,
+    largestFile,
+    largestFileSize,
+  };
+}
+
 export async function scanDirectory(
   options: ScannerOptions,
 ): Promise<ScanResult> {
@@ -87,14 +159,11 @@ export async function scanDirectory(
     files = applyIncludeFilter(files, includeFilter);
   }
 
-  const totalFiles = files.filter((f) => !f.isDirectory).length;
-  const totalDirectories = files.filter((f) => f.isDirectory).length;
-  const totalSize = files.reduce((sum, f) => sum + f.size, 0);
+  const stats = computeScanStats(files);
 
   return {
     rootPath,
     files,
-    ignoredPatterns: [],
-    stats: { totalFiles, totalDirectories, totalSize },
+    stats,
   };
 }

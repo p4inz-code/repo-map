@@ -4,6 +4,7 @@ import type { FileEntry } from '../types.js';
 import type { IgnoreFilter } from './ignore.js';
 
 const BINARY_CHECK_CHUNK = 512;
+const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50 MB — skip files larger than this
 
 // Known binary extensions — skip file content check entirely
 const BINARY_EXTENSIONS = new Set([
@@ -21,13 +22,25 @@ function hasBinaryExtension(filePath: string): boolean {
   return BINARY_EXTENSIONS.has(ext);
 }
 
-async function isBinaryFile(filePath: string): Promise<boolean> {
+/**
+ * Checks if a file is binary and returns its size.
+ * Returns { isBinary: true, size: 0 } for binary or unreadable files.
+ * Returns { isBinary: false, size: <fileSize> } for text files.
+ */
+async function checkBinaryFile(filePath: string): Promise<{ isBinary: boolean; size: number }> {
   // Fast path: known binary extensions
   if (hasBinaryExtension(filePath)) {
-    return true;
+    return { isBinary: true, size: 0 };
   }
 
   try {
+    const stat = await fs.stat(filePath);
+
+    // Skip files over max size
+    if (stat.size > MAX_FILE_SIZE) {
+      return { isBinary: true, size: 0 };
+    }
+
     const handle = await fs.open(filePath, 'r');
     try {
       const buffer = Buffer.alloc(BINARY_CHECK_CHUNK);
@@ -43,17 +56,18 @@ async function isBinaryFile(filePath: string): Promise<boolean> {
           (b0 === 0xff && b1 === 0xfe) ||
           (b0 === 0xfe && b1 === 0xff)
         ) {
-          return false;
+          return { isBinary: false, size: stat.size };
         }
       }
 
       // Null byte detection
-      return chunk.includes(0);
+      const isBinary = chunk.includes(0);
+      return { isBinary, size: stat.size };
     } finally {
       await handle.close().catch(() => {});
     }
   } catch {
-    return true;
+    return { isBinary: true, size: 0 };
   }
 }
 
@@ -95,15 +109,20 @@ export async function walkDirectory(
 
         const sub = await walkDirectory(fullPath, options, currentDepth + 1);
         entries.push(...sub);
-      } else if (entry.isFile()) {
-        if (await isBinaryFile(fullPath)) continue;
-
-        let size = 0;
-        try {
-          size = (await fs.stat(fullPath)).size;
-        } catch {
-          // stat failed — report size as 0
+      } else if (entry.isFile() || entry.isSymbolicLink()) {
+        if (entry.isSymbolicLink()) {
+          // Resolve symlink and verify it points to a regular file
+          try {
+            const linkTarget = await fs.stat(fullPath);
+            if (!linkTarget.isFile()) continue;
+          } catch {
+            // Broken symlink — skip
+            continue;
+          }
         }
+
+        const { isBinary, size } = await checkBinaryFile(fullPath);
+        if (isBinary) continue;
 
         entries.push({
           path: fullPath,
