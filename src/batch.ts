@@ -14,13 +14,21 @@ export async function processBatch<T, R>(
   fn: (item: T, index: number) => Promise<R>,
   batchSize = 50,
 ): Promise<R[]> {
+  // Guard against invalid values.
+  // Non-positive batch sizes fall back to the default.
+  batchSize = batchSize > 0 ? batchSize : 50;
+
   const results: R[] = [];
+
   for (let i = 0; i < items.length; i += batchSize) {
     const batch = items.slice(i, i + batchSize);
+
     const batchResults = await Promise.all(
       batch.map((item, batchIdx) => fn(item, i + batchIdx)),
     );
+
     results.push(...batchResults);
   }
+
   return results;
 }

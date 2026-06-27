@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { run } from './index.js';
+import { createUISession } from './ui/index.js';
 
 let interrupted = false;
 
@@ -28,62 +29,74 @@ run(process.argv)
         ? (err as NodeJS.ErrnoException).errno
         : undefined;
 
+    // Create a minimal UISession for error display
+    const ui = createUISession({ color: process.env.NO_COLOR !== '1' });
+
     // Known application errors (from src/index.ts)
     if (
       message.includes('Path does not exist') ||
       message.includes('Path is not a directory')
     ) {
-      process.stderr.write(`Error: ${message}\n`);
+      ui.reportError('Path Error', message);
+      ui.close();
       process.exit(1);
     }
 
     // Permission errors
     if (errorCode === 'EACCES' || errorCode === 'EPERM' || errno === -13) {
-      process.stderr.write(
-        `Error: Permission denied while scanning the directory.\n` +
-          `Try running with elevated permissions or scanning a directory you have access to.\n`,
+      ui.reportError(
+        'Permission Denied',
+        'Permission denied while scanning the directory.',
+        'Try running with elevated permissions or scanning a directory you have access to.',
       );
+      ui.close();
       process.exit(1);
     }
 
     // Filesystem errors
     if (errorCode === 'ENOENT' || errno === -2) {
-      process.stderr.write(
-        `Error: Cannot read directory or file. The path may not exist or may be a broken symlink.\n`,
+      ui.reportError(
+        'Filesystem Error',
+        'Cannot read directory or file. The path may not exist or may be a broken symlink.',
       );
+      ui.close();
       process.exit(1);
     }
 
     // Filesystem full
     if (errorCode === 'ENOSPC') {
-      process.stderr.write(
-        `Error: No space left on device. Free up disk space and try again.\n`,
+      ui.reportError(
+        'Disk Full',
+        'No space left on device.',
+        'Free up disk space and try again.',
       );
+      ui.close();
       process.exit(1);
     }
 
     // File too large
     if (errorCode === 'EFBIG') {
-      process.stderr.write(
-        `Error: File too large to read. The scanner encountered an oversized file.\n`,
+      ui.reportError(
+        'File Too Large',
+        'The scanner encountered an oversized file.',
       );
+      ui.close();
       process.exit(1);
     }
 
     // Invalid argument / malformed path
     if (errorCode === 'EINVAL') {
-      process.stderr.write(
-        `Error: Invalid path or argument. Check the provided path and options.\n`,
+      ui.reportError(
+        'Invalid Argument',
+        'Invalid path or argument.',
+        'Check the provided path and options.',
       );
-      process.exit(1);
-    }
-
-    // Premature exit (e.g., process killed externally)
-    if (message.includes('Premature close') || message.includes('closed')) {
+      ui.close();
       process.exit(1);
     }
 
     // Fallback for unexpected errors
-    process.stderr.write(`Error: ${message}\n`);
+    ui.reportError('Error', message);
+    ui.close();
     process.exit(1);
   });

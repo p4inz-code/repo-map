@@ -7,11 +7,14 @@ import { formatJson } from './formatters/json.js';
 import { formatMarkdown } from './formatters/markdown.js';
 import { formatStats, formatStatsJson } from './formatters/stats.js';
 import { fileCache } from './file-cache.js';
+import { createUISession } from './ui/index.js';
 
 /**
  * Main pipeline: scan → analyze → format → output.
  *
  * Orchestrates the full repo-map workflow from CLI arguments to final output.
+ * Progress UI is managed by UISession (stderr). Final output is returned as a
+ * string (stdout).
  */
 export async function run(argv: string[]): Promise<string> {
   const options = parseCliArgs(argv);
@@ -28,6 +31,7 @@ export async function run(argv: string[]): Promise<string> {
   const rootPath = path.resolve(options.path);
 
   // Validate that the target path exists and is a directory
+  // (handled before UISession — errors are caught in bin.ts)
   let pathStat;
   try {
     pathStat = await fs.stat(rootPath);
@@ -45,52 +49,68 @@ export async function run(argv: string[]): Promise<string> {
     );
   }
 
-  // Scanning indicator (single line, no spinner — professional and clean)
   const projectLabel = path.basename(rootPath);
-  process.stderr.write(`Scanning ${projectLabel}... `);
 
-  // 1. Scan directory
-  const scanResult = await scanDirectory({
-    rootPath,
-    useGitignore: options.useGitignore,
-    maxDepth: options.depth,
-    excludePatterns: options.exclude,
-    includePatterns: options.include,
-  });
+  // Create UISession for progress and output UI
+  const ui = createUISession({ color: options.color !== false });
 
-  process.stderr.write(`${scanResult.stats.totalFiles} files, ${scanResult.stats.totalDirectories} directories.\n`);
-  process.stderr.write('Analyzing... ');
+  try {
+    // 1. Scan with progress UI
+    ui.startScanning(projectLabel);
 
-  // 2. Analyze (skip tree/architecture when only stats are needed)
-  const analysis = await analyze({
-    files: scanResult.files,
-    rootPath,
-    stats: scanResult.stats,
-    skipOutputGeneration: options.stats,
-  });
+    const scanResult = await scanDirectory({
+      rootPath,
+      useGitignore: options.useGitignore,
+      maxDepth: options.depth,
+      excludePatterns: options.exclude,
+      includePatterns: options.include,
+    });
 
-  const elapsed = ((performance.now() - startTime) / 1000).toFixed(1);
-  process.stderr.write(`Done in ${elapsed}s.\n`);
+    ui.finishScanning(scanResult.stats.totalFiles, scanResult.stats.totalDirectories);
 
-  // 3. Format
-  // --stats takes precedence over --json and --output
-  if (options.stats) {
-    return options.format === 'json'
-      ? formatStatsJson(analysis)
-      : formatStats(analysis);
+    // 2. Analyze with progress UI
+    ui.startAnalyzing();
+
+    const analysis = await analyze({
+      files: scanResult.files,
+      rootPath,
+      stats: scanResult.stats,
+      skipOutputGeneration: options.stats,
+    });
+
+    const elapsed = ((performance.now() - startTime) / 1000);
+
+    ui.finishAnalyzing(elapsed);
+
+    // 3. Format output
+    if (options.stats) {
+      // Render stats screen on stderr
+      ui.renderStats(analysis);
+
+      // Return formatted stats for stdout
+      return options.format === 'json'
+        ? formatStatsJson(analysis)
+        : formatStats(analysis);
+    }
+
+    // Full completion — render summary box on stderr
+    const output =
+      options.format === 'json'
+        ? formatJson(analysis)
+        : formatMarkdown(analysis);
+
+    // Write to file or return
+    if (options.output) {
+      await fs.mkdir(path.dirname(options.output), { recursive: true });
+      await fs.writeFile(options.output, output, 'utf-8');
+      ui.renderCompletion(analysis, elapsed, options.output);
+      return `Output written to ${options.output}`;
+    }
+
+    // No output file — render completion and return the formatted string
+    ui.renderCompletion(analysis, elapsed);
+    return output;
+  } finally {
+    ui.close();
   }
-
-  const output =
-    options.format === 'json'
-      ? formatJson(analysis)
-      : formatMarkdown(analysis);
-
-  // 4. Write to file or return
-  if (options.output) {
-    await fs.mkdir(path.dirname(options.output), { recursive: true });
-    await fs.writeFile(options.output, output, 'utf-8');
-    return `Output written to ${options.output}`;
-  }
-
-  return output;
 }
