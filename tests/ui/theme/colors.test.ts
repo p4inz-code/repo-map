@@ -5,6 +5,7 @@ import type { ColorToken, ColorMode } from '../../../src/ui/theme/colors.js';
 const ALL_TOKENS: ColorToken[] = [
   'primary', 'success', 'warning', 'error', 'info',
   'dim', 'muted', 'text', 'bg', 'heading', 'code', 'link', 'border',
+  'bar-fill', 'bar-empty',
 ];
 
 const ALL_MODES: ColorMode[] = ['none', '16', '256', 'truecolor'];

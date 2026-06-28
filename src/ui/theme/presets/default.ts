@@ -54,6 +54,8 @@ export const defaultTheme: Theme = {
     code: '\x1b[38;2;255;174;0m',
     link: '\x1b[4;38;2;0;175;255m',
     border: '\x1b[2;38;2;48;48;48m',
+    'bar-fill': '\x1b[38;2;0;255;94m',
+    'bar-empty': '\x1b[38;2;108;108;108m',
   },
 
   symbols: {

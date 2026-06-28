@@ -56,6 +56,8 @@ export const highContrastTheme: Theme = {
     code: '\x1b[1;38;2;255;174;0m',
     link: '\x1b[1;4;38;2;0;175;255m',
     border: '\x1b[1;38;2;100;100;100m',
+    'bar-fill': '\x1b[1;38;2;0;255;94m',
+    'bar-empty': '\x1b[1;38;2;180;180;180m',
   },
 
   symbols: {

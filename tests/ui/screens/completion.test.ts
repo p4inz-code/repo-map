@@ -13,22 +13,24 @@ import type { WidthInfo } from '../../../src/ui/layout/width.js';
 const MOCK_ANSI_GREEN = '\x1b[32m';
 const MOCK_ANSI_RESET = '\x1b[0m';
 const MOCK_ANSI_DIM = '\x1b[2m';
+const MOCK_ANSI_BOLD = '\x1b[1m';
 
 function makeMockTheme(): Theme {
   return {
     name: 'test',
     color: (token: ColorToken) => {
-      if (token === 'success') return MOCK_ANSI_GREEN;
-      if (token === 'dim') return MOCK_ANSI_DIM;
+      if (token === 'success' || token === 'bar-fill') return MOCK_ANSI_GREEN;
+      if (token === 'dim' || token === 'bar-empty') return MOCK_ANSI_DIM;
       return '';
     },
     style: (text: string, style?: TextStyle) => {
       if (!style || (!style.bold && !style.dim && !style.color)) return text;
       let prefix = '';
       let suffix = '';
-      if (style.bold) { prefix += '\x1b[1m'; suffix = '\x1b[0m'; }
-      if (style.dim) { prefix += MOCK_ANSI_DIM; suffix = '\x1b[0m'; }
-      if (style.color === 'success') { prefix += MOCK_ANSI_GREEN; suffix = '\x1b[0m'; }
+      if (style.bold) { prefix += MOCK_ANSI_BOLD; suffix = MOCK_ANSI_RESET; }
+      if (style.dim) { prefix += MOCK_ANSI_DIM; suffix = MOCK_ANSI_RESET; }
+      if (style.color === 'success' || style.color === 'bar-fill') { prefix += MOCK_ANSI_GREEN; suffix = MOCK_ANSI_RESET; }
+      if (style.color === 'bar-empty') { prefix += MOCK_ANSI_DIM; suffix = MOCK_ANSI_RESET; }
       if (!prefix) return text;
       return `${prefix}${text}${suffix}`;
     },
@@ -36,7 +38,7 @@ function makeMockTheme(): Theme {
     border: (style: BorderStyle): BorderChars => ({
       tl: '╭', tr: '╮', bl: '╰', br: '╯', h: '─', v: '│',
     }),
-    colors: { primary: '', success: MOCK_ANSI_GREEN, error: '', warning: '', info: '', dim: MOCK_ANSI_DIM, muted: '', text: '', bg: '', heading: '', code: '', link: '', border: '' },
+    colors: { primary: '', success: MOCK_ANSI_GREEN, error: '', warning: '', info: '', dim: MOCK_ANSI_DIM, muted: '', text: '', bg: '', heading: '', code: '', link: '', border: '', 'bar-fill': MOCK_ANSI_GREEN, 'bar-empty': MOCK_ANSI_DIM },
     symbols: { check: '✓', cross: '✗', warning: '⚠', arrow: '→', bullet: '·', pointer: '▸', ellipsis: '…', arrowUp: '↑', arrowDown: '↓', separator: '─', filled: '█', empty: '░' },
     borders: {
       round: { tl: '╭', tr: '╮', bl: '╰', br: '╯', h: '─', v: '│' },
@@ -57,6 +59,9 @@ function makeWidthInfo(overrides: Partial<WidthInfo> = {}): WidthInfo {
   };
 }
 
+/** Strip ANSI escape sequences for visible-text assertions. */
+const stripAnsi = (s: string) => s.replace(/\x1b\[[0-9;]*m/g, '');
+
 function makeDefaultOptions(overrides: Partial<CompletionOptions> = {}): CompletionOptions {
   return {
     projectName: 'my-project',
@@ -74,10 +79,6 @@ function makeDefaultOptions(overrides: Partial<CompletionOptions> = {}): Complet
       { name: 'JSON', category: 'language', count: 4 },
       { name: 'Vitest', category: 'testing', count: 5 },
     ],
-    strengthsCount: 5,
-    suggestionsCount: 3,
-    highPriorityCount: 2,
-    elapsed: 1.2,
     ...overrides,
   };
 }
@@ -106,97 +107,136 @@ describe('renderCompletion', () => {
     renderCompletion(makeDefaultOptions(), renderer, makeWidthInfo());
     const output = stderrSpy.mock.calls.map((c) => c[0] as string).join('');
 
-    // Box corners present (title follows corner directly, no dash in between)
+    // Box corners present (title follows corner directly)
     expect(output).toContain('╭ repo-map · my-project');
     expect(output).toContain('╰─');
     expect(output).toContain('│');
   });
 
-  // ── Key metrics ───────────────────────────────────────────────
+  // ── Classification (focal point) ──────────────────────────────
 
-  it('shows all key metrics', () => {
+  it('shows classification with confidence as right-aligned suffix', () => {
     renderCompletion(makeDefaultOptions(), renderer, makeWidthInfo());
     const output = stderrSpy.mock.calls.map((c) => c[0] as string).join('');
-
-    expect(output).toContain('Files: 42');
-    expect(output).toContain('Dirs: 12');
-    expect(output).toContain('Size: 15.3 KB');
-    expect(output).toContain('Depth: 4');
+    expect(output).toContain('Classification');
+    expect(output).toContain('CLI Tool');
+    expect(output).toContain('87%');
   });
 
-  // ── Classification, maturity, health score ────────────────────
-
-  it('shows classification with confidence', () => {
+  it('applies bold style to classification label', () => {
     renderCompletion(makeDefaultOptions(), renderer, makeWidthInfo());
     const output = stderrSpy.mock.calls.map((c) => c[0] as string).join('');
-    expect(output).toContain('CLI Tool (87%)');
+    expect(output).toContain(MOCK_ANSI_BOLD);
+    expect(output).toContain('Classification');
   });
+
+  // ── Maturity ──────────────────────────────────────────────────
 
   it('shows maturity', () => {
     renderCompletion(makeDefaultOptions(), renderer, makeWidthInfo());
     const output = stderrSpy.mock.calls.map((c) => c[0] as string).join('');
+    expect(output).toContain('Maturity');
     expect(output).toContain('Active Development');
   });
 
-  it('shows health score', () => {
+  // ── Health bar ────────────────────────────────────────────────
+
+  it('shows health bar with filled and empty characters', () => {
     renderCompletion(makeDefaultOptions(), renderer, makeWidthInfo());
     const output = stderrSpy.mock.calls.map((c) => c[0] as string).join('');
+    expect(output).toContain('Health');
+    expect(output).toContain('█');
+    expect(output).toContain('░');
     expect(output).toContain('65/100');
+  });
+
+  it('renders full bar for health score of 100', () => {
+    renderCompletion(makeDefaultOptions({ healthScore: 100 }), renderer, makeWidthInfo());
+    const output = stderrSpy.mock.calls.map((c) => c[0] as string).join('');
+    // Should have 24 filled characters and no empty characters
+    expect(output).toContain('█'.repeat(24));
+    expect(output).not.toContain('░');
+    expect(output).toContain('100/100');
+  });
+
+  it('renders empty bar for health score of 0', () => {
+    renderCompletion(makeDefaultOptions({ healthScore: 0 }), renderer, makeWidthInfo());
+    const output = stderrSpy.mock.calls.map((c) => c[0] as string).join('');
+    // Should have 24 empty characters and no filled characters
+    expect(output).toContain('░'.repeat(24));
+    expect(output).not.toContain('█');
+    expect(output).toContain('0/100');
+  });
+
+  it('applies bar-fill semantic color to filled blocks', () => {
+    renderCompletion(makeDefaultOptions(), renderer, makeWidthInfo());
+    const output = stderrSpy.mock.calls.map((c) => c[0] as string).join('');
+    expect(output).toContain(MOCK_ANSI_GREEN);
+    expect(output).toContain('█');
+  });
+
+  it('applies bar-empty semantic color to empty blocks', () => {
+    renderCompletion(makeDefaultOptions(), renderer, makeWidthInfo());
+    const output = stderrSpy.mock.calls.map((c) => c[0] as string).join('');
+    expect(output).toContain(MOCK_ANSI_DIM);
+    expect(output).toContain('░');
+  });
+
+  // ── Metrics line ──────────────────────────────────────────────
+
+  it('shows compact metrics line with all values', () => {
+    renderCompletion(makeDefaultOptions(), renderer, makeWidthInfo());
+    const output = stderrSpy.mock.calls.map((c) => c[0] as string).join('');
+    expect(output).toContain('Files');
+    expect(output).toContain('42');
+    expect(output).toContain('Dirs');
+    expect(output).toContain('12');
+    expect(output).toContain('Size');
+    expect(output).toContain('15.3 KB');
+    expect(output).toContain('Depth');
+    expect(output).toContain('4');
   });
 
   // ── Language breakdown ────────────────────────────────────────
 
-  it('renders language breakdown with file counts and percentages', () => {
+  it('renders language breakdown with file counts and integer percentages', () => {
     renderCompletion(makeDefaultOptions(), renderer, makeWidthInfo());
     const output = stderrSpy.mock.calls.map((c) => c[0] as string).join('');
 
     expect(output).toContain('TypeScript');
     expect(output).toContain('30 files');
-    expect(output).toContain('71.4%');
+    expect(output).toContain('71%');
 
     expect(output).toContain('JavaScript');
     expect(output).toContain('8 files');
-    expect(output).toContain('19.0%');
+    expect(output).toContain('19%');
 
     expect(output).toContain('JSON');
     expect(output).toContain('4 files');
-    expect(output).toContain('9.5%');
+    expect(output).toContain('10%');
   });
 
-  // ── Strengths and Suggestions ─────────────────────────────────
+  // ── Strengths and Suggestions (MUST NOT appear) ───────────────
 
-  it('shows strengths count with check mark', () => {
+  it('does not show strengths in the default dashboard', () => {
     renderCompletion(makeDefaultOptions(), renderer, makeWidthInfo());
     const output = stderrSpy.mock.calls.map((c) => c[0] as string).join('');
-    // Check mark symbol + count
-    expect(output).toContain('✓');
-    expect(output).toContain('5 strengths identified');
+    expect(output).not.toContain('strengths identified');
   });
 
-  it('shows suggestions with high priority count', () => {
+  it('does not show suggestions in the default dashboard', () => {
     renderCompletion(makeDefaultOptions(), renderer, makeWidthInfo());
     const output = stderrSpy.mock.calls.map((c) => c[0] as string).join('');
-    expect(output).toContain('3 improvement suggestions');
-    expect(output).toContain('2 high priority');
-  });
-
-  it('shows suggestions without high priority when count is 0', () => {
-    renderCompletion(
-      makeDefaultOptions({ suggestionsCount: 4, highPriorityCount: 0 }),
-      renderer,
-      makeWidthInfo(),
-    );
-    const output = stderrSpy.mock.calls.map((c) => c[0] as string).join('');
-    expect(output).toContain('4 improvement suggestions');
+    expect(output).not.toContain('improvement suggestions');
     expect(output).not.toContain('high priority');
   });
 
-  // ── Elapsed time ──────────────────────────────────────────────
+  // ── Elapsed time (MUST NOT appear) ────────────────────────────
 
-  it('shows completed time', () => {
-    renderCompletion(makeDefaultOptions({ elapsed: 2.5 }), renderer, makeWidthInfo());
+  it('does not show elapsed time in the default dashboard', () => {
+    renderCompletion(makeDefaultOptions(), renderer, makeWidthInfo());
     const output = stderrSpy.mock.calls.map((c) => c[0] as string).join('');
-    expect(output).toContain('Completed in 2.5s');
+    expect(output).not.toContain('Completed in');
   });
 
   // ── Output path ───────────────────────────────────────────────
@@ -245,6 +285,72 @@ describe('renderCompletion', () => {
     expect(output).toContain('No languages detected');
   });
 
+  // ── Breathing whitespace ──────────────────────────────────────
+
+  it('includes breathing whitespace between sections', () => {
+    renderCompletion(makeDefaultOptions(), renderer, makeWidthInfo());
+    const output = stderrSpy.mock.calls.map((c) => c[0] as string).join('');
+
+    // There should be blank lines inside the box (between sections)
+    // The box content has blank lines between: top border and classification,
+    // health and metrics, metrics and languages, languages and bottom border
+    const lines = output.split('\n');
+    // Find lines that are just box border + padding (empty content lines)
+    const emptyContentLines = lines.filter((line) =>
+      line.includes('│') && line.trim().replace(/│/g, '').trim() === '',
+    );
+    expect(emptyContentLines.length).toBeGreaterThanOrEqual(3);
+  });
+
+  // ── Label column alignment ────────────────────────────────────
+
+  it('uses 20-character label column for Classification', () => {
+    renderCompletion(makeDefaultOptions(), renderer, makeWidthInfo());
+    const output = stderrSpy.mock.calls.map((c) => c[0] as string).join('');
+
+    // Strip ANSI codes for alignment checks
+    const classLine = output.split('\n').find((l) => l.includes('Classification'));
+    expect(classLine).toBeDefined();
+    const visible = stripAnsi(classLine!);
+    // "Classification" is 14 chars, padded to 20 with 6 spaces
+    expect(visible).toContain('Classification      CLI Tool');
+  });
+
+  it('uses 20-character label column for Maturity', () => {
+    renderCompletion(makeDefaultOptions(), renderer, makeWidthInfo());
+    const output = stderrSpy.mock.calls.map((c) => c[0] as string).join('');
+
+    const matLine = output.split('\n').find((l) => l.includes('Maturity'));
+    expect(matLine).toBeDefined();
+    const visible = stripAnsi(matLine!);
+    // "Maturity" is 8 chars, padded to 20 with 12 spaces
+    expect(visible).toContain('Maturity            Active Development');
+  });
+
+  it('uses 20-character label column for Health', () => {
+    renderCompletion(makeDefaultOptions(), renderer, makeWidthInfo());
+    const output = stderrSpy.mock.calls.map((c) => c[0] as string).join('');
+
+    const healthLine = output.split('\n').find((l) => l.includes('Health'));
+    expect(healthLine).toBeDefined();
+    const visible = stripAnsi(healthLine!);
+    // "Health" is 6 chars, padded to 20 with 14 spaces
+    expect(visible).toContain('Health              ');
+  });
+
+  it('classification suffix is dim (not bold)', () => {
+    renderCompletion(makeDefaultOptions(), renderer, makeWidthInfo());
+    const output = stderrSpy.mock.calls.map((c) => c[0] as string).join('');
+    // The suffix "87%" should be wrapped in dim, not bold
+    const classLine = output.split('\n').find((l) => l.includes('Classification'))!;
+    // Find the position of "87%" in the line
+    const suffixIdx = classLine.indexOf('87%');
+    // The 5 chars before "87%" should include a dim code but not a bold code
+    const beforeSuffix = classLine.substring(Math.max(0, suffixIdx - 10), suffixIdx);
+    expect(beforeSuffix).toContain(MOCK_ANSI_DIM);
+    expect(beforeSuffix).not.toContain(MOCK_ANSI_BOLD);
+  });
+
   // ── Narrow terminal ───────────────────────────────────────────
 
   it('renders without box borders on narrow terminals', () => {
@@ -258,34 +364,105 @@ describe('renderCompletion', () => {
     expect(output).not.toContain('│');
 
     // Content is still present
-    expect(output).toContain('Files: 42');
+    expect(output).toContain('Classification:');
+    expect(output).toContain('CLI Tool');
     expect(output).toContain('TypeScript');
   });
 
-  // ── Styling verification ──────────────────────────────────────
-
-  it('applies success color to strengths line', () => {
-    renderCompletion(makeDefaultOptions(), renderer, makeWidthInfo());
+  it('renders health as text (no bar) on narrow terminals', () => {
+    const narrowWidth = makeWidthInfo({ columns: 50, contentWidth: 46, isNarrow: true, breakpoint: 'compact' });
+    renderCompletion(makeDefaultOptions(), renderer, narrowWidth);
     const output = stderrSpy.mock.calls.map((c) => c[0] as string).join('');
-    // The strengths line should have green ANSI codes
-    expect(output).toContain(MOCK_ANSI_GREEN);
-    expect(output).toContain('5 strengths identified');
+
+    // Should show health score as text, not bar characters
+    expect(output).toContain('Health:');
+    expect(output).toContain('65/100');
+    expect(output).not.toContain('█');
+    expect(output).not.toContain('░');
   });
 
-  it('applies dim style to elapsed line', () => {
-    renderCompletion(makeDefaultOptions(), renderer, makeWidthInfo());
+  it('shows project name header on narrow terminals', () => {
+    const narrowWidth = makeWidthInfo({ columns: 50, contentWidth: 46, isNarrow: true, breakpoint: 'compact' });
+    renderCompletion(makeDefaultOptions(), renderer, narrowWidth);
     const output = stderrSpy.mock.calls.map((c) => c[0] as string).join('');
-    // The elapsed line should have dim ANSI codes
-    expect(output).toContain(MOCK_ANSI_DIM);
-    expect(output).toContain('Completed in');
+    expect(output).toContain('repo-map · my-project');
   });
 
-  it('applies bold style to classification label', () => {
-    renderCompletion(makeDefaultOptions(), renderer, makeWidthInfo());
+  // ── Language truncation (12-line budget) ────────────────────
+
+  it('truncates languages to 3 when more than 3 are present', () => {
+    renderCompletion(
+      makeDefaultOptions({
+        technologies: [
+          { name: 'TypeScript', category: 'language', count: 30 },
+          { name: 'JavaScript', category: 'language', count: 8 },
+          { name: 'JSON', category: 'language', count: 4 },
+          { name: 'Python', category: 'language', count: 3 },
+          { name: 'Go', category: 'language', count: 2 },
+          { name: 'Rust', category: 'language', count: 1 },
+        ],
+      }),
+      renderer,
+      makeWidthInfo(),
+    );
     const output = stderrSpy.mock.calls.map((c) => c[0] as string).join('');
-    // Bold ANSI code
-    expect(output).toContain('\x1b[1m');
-    expect(output).toContain('Classification');
+    const visible = stripAnsi(output);
+    // Top 3 languages shown
+    expect(visible).toContain('TypeScript');
+    expect(visible).toContain('JavaScript');
+    expect(visible).toContain('JSON');
+    // Overflow indicator shown
+    expect(visible).toContain('+3 more languages');
+    // 4th, 5th, 6th languages NOT shown
+    expect(visible).not.toContain('  Python ');
+    expect(visible).not.toContain('  Go ');
+    expect(visible).not.toContain('  Rust ');
+  });
+
+  it('does not truncate when 3 or fewer languages', () => {
+    renderCompletion(
+      makeDefaultOptions({
+        technologies: [
+          { name: 'TypeScript', category: 'language', count: 30 },
+          { name: 'JavaScript', category: 'language', count: 8 },
+          { name: 'JSON', category: 'language', count: 4 },
+        ],
+      }),
+      renderer,
+      makeWidthInfo(),
+    );
+    const output = stderrSpy.mock.calls.map((c) => c[0] as string).join('');
+    const visible = stripAnsi(output);
+    expect(visible).toContain('TypeScript');
+    expect(visible).toContain('JavaScript');
+    expect(visible).toContain('JSON');
+    expect(visible).not.toContain('more languages');
+  });
+
+  it('respects 12-line content budget with truncation', () => {
+    renderCompletion(
+      makeDefaultOptions({
+        technologies: [
+          { name: 'TypeScript', category: 'language', count: 30 },
+          { name: 'JavaScript', category: 'language', count: 8 },
+          { name: 'JSON', category: 'language', count: 4 },
+          { name: 'Python', category: 'language', count: 3 },
+          { name: 'Go', category: 'language', count: 2 },
+          { name: 'Rust', category: 'language', count: 1 },
+        ],
+      }),
+      renderer,
+      makeWidthInfo(),
+    );
+    const output = stderrSpy.mock.calls.map((c) => c[0] as string).join('');
+    const lines = output.split('\n');
+    // Count content lines inside the box (between top and bottom border)
+    const topBorder = lines.findIndex((l) => l.includes('╭'));
+    const bottomBorder = lines.findIndex((l) => l.includes('╰'));
+    // Budget: 12 content lines (between borders, exclusive)
+    // Fixed: 7 (breathing, class, maturity, health, gap, metrics, gap)
+    // + up to 3 lang lines + 1 overflow + 1 breathing = 12 max
+    expect(bottomBorder - topBorder - 1).toBeLessThanOrEqual(12);
   });
 
   // ── Zero values ───────────────────────────────────────────────
@@ -297,17 +474,13 @@ describe('renderCompletion', () => {
         totalDirectories: 0,
         totalSize: 0,
         technologies: [],
-        strengthsCount: 0,
-        suggestionsCount: 0,
-        highPriorityCount: 0,
-        elapsed: 0,
       }),
       renderer,
       makeWidthInfo(),
     );
     const output = stderrSpy.mock.calls.map((c) => c[0] as string).join('');
-    expect(output).toContain('Files: 0');
-    expect(output).toContain('0 B');
+    expect(output).toContain('Files');
+    expect(output).toContain('0');
     expect(output).toContain('No languages detected');
     expect(output).not.toContain('NaN');
     expect(output).not.toContain('undefined');

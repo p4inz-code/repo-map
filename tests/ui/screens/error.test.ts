@@ -81,29 +81,29 @@ describe('renderError', () => {
   });
 
   it('renders a box with error title', () => {
-    renderError({ title: 'Path Error', message: 'File not found', fatal: false }, renderer);
+    renderError({ message: 'File not found' }, renderer);
     const output = stderrSpy.mock.calls.map((c) => c[0] as string).join('');
     expect(output).toContain('╭');
     expect(output).toContain('Error');
     expect(output).toContain('╰');
   });
 
-  it('shows the cross symbol with the error title', () => {
-    renderError({ title: 'Path Error', message: 'File not found', fatal: false }, renderer);
+  it('shows the cross symbol with the error message', () => {
+    renderError({ message: 'File not found' }, renderer);
     const output = stderrSpy.mock.calls.map((c) => c[0] as string).join('');
     expect(output).toContain('✗');
-    expect(output).toContain('Path Error');
+    expect(output).toContain('File not found');
   });
 
   it('displays the error message', () => {
-    renderError({ title: 'Error', message: 'Something went wrong', fatal: false }, renderer);
+    renderError({ message: 'Something went wrong' }, renderer);
     const output = stderrSpy.mock.calls.map((c) => c[0] as string).join('');
     expect(output).toContain('Something went wrong');
   });
 
   it('displays the suggestion when provided', () => {
     renderError(
-      { title: 'Path Error', message: 'Not found', suggestion: 'Try a different path', fatal: false },
+      { message: 'Not found', suggestion: 'Try a different path' },
       renderer,
     );
     const output = stderrSpy.mock.calls.map((c) => c[0] as string).join('');
@@ -111,19 +111,13 @@ describe('renderError', () => {
   });
 
   it('does not display suggestion when omitted', () => {
-    renderError({ title: 'Error', message: 'Oops', fatal: false }, renderer);
+    renderError({ message: 'Oops' }, renderer);
     const output = stderrSpy.mock.calls.map((c) => c[0] as string).join('');
-    expect(output).not.toContain('suggestion');
+    expect(output).not.toContain('Try');
   });
 
-  it('shows a fatal hint when fatal is true', () => {
-    renderError({ title: 'Fatal Error', message: 'Crash', fatal: true }, renderer);
-    const output = stderrSpy.mock.calls.map((c) => c[0] as string).join('');
-    expect(output).toContain('Program will exit.');
-  });
-
-  it('does not show fatal hint when fatal is false', () => {
-    renderError({ title: 'Warning', message: 'Minor issue', fatal: false }, renderer);
+  it('does not show "Program will exit." text', () => {
+    renderError({ message: 'Crash' }, renderer);
     const output = stderrSpy.mock.calls.map((c) => c[0] as string).join('');
     expect(output).not.toContain('Program will exit.');
   });
@@ -131,23 +125,23 @@ describe('renderError', () => {
   it('renders without box borders on narrow terminals', () => {
     const narrowWidth = makeWidthInfo({ columns: 50, contentWidth: 46, isNarrow: true, breakpoint: 'compact' });
     renderer = new Renderer(makeMockTheme(), narrowWidth);
-    renderError({ title: 'Error', message: 'Something went wrong', fatal: false }, renderer);
+    renderError({ message: 'Something went wrong' }, renderer);
     const output = stderrSpy.mock.calls.map((c) => c[0] as string).join('');
     expect(output).not.toContain('╭');
     expect(output).not.toContain('╰');
     expect(output).toContain('Something went wrong');
   });
 
-  it('applies error color to the title line', () => {
-    renderError({ title: 'Critical', message: 'Failure', fatal: true }, renderer);
+  it('applies error color to the message line', () => {
+    renderError({ message: 'Critical failure' }, renderer);
     const output = stderrSpy.mock.calls.map((c) => c[0] as string).join('');
     expect(output).toContain(MOCK_ANSI_RED);
-    expect(output).toContain('Critical');
+    expect(output).toContain('Critical failure');
   });
 
   it('applies dim style to suggestion text', () => {
     renderError(
-      { title: 'Error', message: 'Oops', suggestion: 'Fix it', fatal: false },
+      { message: 'Oops', suggestion: 'Fix it' },
       renderer,
     );
     const output = stderrSpy.mock.calls.map((c) => c[0] as string).join('');
@@ -157,16 +151,15 @@ describe('renderError', () => {
 
   it('handles long messages by wrapping', () => {
     const longMsg = 'This is a very long error message that should be wrapped across multiple lines because it exceeds the content width of the terminal';
-    renderError({ title: 'Error', message: longMsg, fatal: false }, renderer);
+    renderError({ message: longMsg }, renderer);
     const output = stderrSpy.mock.calls.map((c) => c[0] as string).join('');
     expect(output).toContain('This is a very long');
-    expect(output).toContain('exceeds the content');
     // Should have newlines indicating wrapping
     expect(output.split('\n').length).toBeGreaterThan(3);
   });
 
   it('handles empty message gracefully', () => {
-    renderError({ title: 'Error', message: '', fatal: false }, renderer);
+    renderError({ message: '' }, renderer);
     const output = stderrSpy.mock.calls.map((c) => c[0] as string).join('');
     expect(output).toContain('Error');
   });

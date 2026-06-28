@@ -33,6 +33,7 @@ describe('createUISession', () => {
     expect(typeof ui.finishAnalyzing).toBe('function');
     expect(typeof ui.renderCompletion).toBe('function');
     expect(typeof ui.renderStats).toBe('function');
+    expect(typeof ui.renderSuggest).toBe('function');
     expect(typeof ui.renderHelp).toBe('function');
     expect(typeof ui.reportError).toBe('function');
     expect(typeof ui.close).toBe('function');
@@ -106,19 +107,20 @@ describe('createUISession', () => {
 
     const ui = createUISession({ color: false });
     stderrSpy.mockClear();
-    ui.renderCompletion(analysis, 1.2);
+    ui.renderCompletion(analysis);
     const output = stderrSpy.mock.calls.map((c) => c[0] as string).join('');
-    expect(output).toContain('Files: 42');
+    expect(output).toContain('Files');
+    expect(output).toContain('42');
     expect(output).toContain('TypeScript');
     expect(output).toContain('30 files');
-    expect(output).toContain('Completed in 1.2s');
+    expect(output).toContain('Classification');
   });
 
   it('renderCompletion with outputPath renders the output message', () => {
     const analysis = createBaseAnalysis();
     const ui = createUISession({ color: false });
     stderrSpy.mockClear();
-    ui.renderCompletion(analysis, 0.5, 'report.md');
+    ui.renderCompletion(analysis, 'report.md');
     const output = stderrSpy.mock.calls.map((c) => c[0] as string).join('');
     expect(output).toContain('Output written to report.md');
   });
@@ -148,11 +150,41 @@ describe('createUISession', () => {
 
     const ui = createUISession({ color: false });
     stderrSpy.mockClear();
-    ui.renderStats(analysis);
+    ui.renderStats(analysis, 1.5);
     const output = stderrSpy.mock.calls.map((c) => c[0] as string).join('');
-    expect(output).toContain('Files: 30');
-    expect(output).toContain('Dirs: 8');
+    expect(output).toContain('Files');
+    expect(output).toContain('30');
     expect(output).toContain('TypeScript');
+    expect(output).toContain('Completed in 1.5s');
+  });
+
+  // ── renderSuggest ──────────────────────────────────────────────
+
+  it('renderSuggest renders suggest screen with strengths and suggestions', () => {
+    const analysis = createBaseAnalysis({
+      projectName: 'test-suggest',
+      intelligence: {
+        ...createMockIntelligence(),
+        strengths: [
+          { title: 'Clean project structure', detail: '', evidence: [] },
+          { title: 'Comprehensive test coverage', detail: '', evidence: [] },
+        ],
+        suggestions: [
+          { title: 'Add CI/CD pipeline', detail: '', priority: 'high' },
+          { title: 'Upgrade dependencies', detail: '', priority: 'medium' },
+          { title: 'Add API docs', detail: '', priority: 'low' },
+        ],
+      },
+    });
+
+    const ui = createUISession({ color: false });
+    stderrSpy.mockClear();
+    ui.renderSuggest(analysis);
+    const output = stderrSpy.mock.calls.map((c) => c[0] as string).join('');
+    expect(output).toContain('Strengths');
+    expect(output).toContain('Clean project structure');
+    expect(output).toContain('Suggestions');
+    expect(output).toContain('Add CI/CD pipeline');
   });
 
   // ── renderHelp ─────────────────────────────────────────────────
@@ -170,12 +202,11 @@ describe('createUISession', () => {
 
   // ── reportError ────────────────────────────────────────────────
 
-  it('reportError renders error screen with title and message', () => {
+  it('reportError renders error screen with message and suggestion', () => {
     const ui = createUISession({ color: false });
     stderrSpy.mockClear();
-    ui.reportError('Test Error', 'Something went wrong', 'Try again');
+    ui.reportError('Something went wrong', 'Try again');
     const output = stderrSpy.mock.calls.map((c) => c[0] as string).join('');
-    expect(output).toContain('Test Error');
     expect(output).toContain('Something went wrong');
     expect(output).toContain('Try again');
   });

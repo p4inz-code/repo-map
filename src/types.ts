@@ -1,5 +1,5 @@
 export const CURRENT_SCHEMA_VERSION = '1.0.0';
-export const CLI_VERSION = '0.3.0';
+export const CLI_VERSION = '2.2.0';
 
 export interface FileEntry {
   path: string;
@@ -334,6 +334,7 @@ export interface CliOptions {
   exclude?: string[];
   include?: string[];
   stats?: boolean;
+  suggest?: boolean;
   /** Whether ANSI color output is enabled. Defaults to true. */
   color: boolean;
 }

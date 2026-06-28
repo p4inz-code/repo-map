@@ -1,41 +1,33 @@
 /**
  * Completion screen — the final results display for repo-map.
  *
- * Renders a professional summary box with key metrics, classification,
- * language breakdown, strengths/suggestions, and elapsed time.
+ * Renders a professional summary box with classification, maturity,
+ * health bar, compact metrics, and language breakdown.
  *
  * # Architecture
  * - Uses the Renderer for ANSI conversion (never emits raw codes).
- * - Uses box, text, and list primitives for structural layout.
+ * - Uses box primitive for structural layout.
  * - Static render (no animation) — writes once to stderr.
  *
  * # Layout (normal-width terminal)
  * ```
- * ╭─ repo-map · my-project ─────────────────────────────╮
- * │                                                      │
- * │  Files: 42   Dirs: 12   Size: 15.3 KB   Depth: 4    │
- * │                                                      │
- * │  Classification:  CLI Tool (87%)                     │
- * │  Maturity:        Active Development                 │
- * │  Health Score:    65/100                             │
- * │                                                      │
- * │  Languages                                           │
- * │  TypeScript    30 files  (71.4%)                     │
- * │  JavaScript     8 files  (19.0%)                     │
- * │  JSON           4 files  ( 9.5%)                     │
- * │                                                      │
- * │  ✓ 5 strengths identified                            │
- * │  ✓ 3 improvement suggestions (2 high priority)       │
- * │                                                      │
- * │  Completed in 1.2s                                   │
- * │                                                      │
- * ╰────────────────────────────────────────────────────────╯
- *
- * Output written to architecture.md
+ * ╭─ repo-map · my-project ───────────────────────────────────────╮
+ * │                                                                │
+ * │  Classification    CLI Tool                              87%   │
+ * │  Maturity          Active Development                          │
+ * │  Health            ██████████████████░░░░░░░░  65/100           │
+ * │                                                                │
+ * │  Files  42    Dirs  12    Size  15.3 KB    Depth  4             │
+ * │                                                                │
+ * │  TypeScript  30 files (71%)                                     │
+ * │  JavaScript   8 files (19%)                                     │
+ * │  JSON         4 files (10%)                                     │
+ * │                                                                │
+ * ╰────────────────────────────────────────────────────────────────╯
  * ```
  *
  * # Narrow-terminal layout (< 60 cols)
- * No box borders. Compact metrics line. Stacked layout.
+ * No box borders. No bar. Text-only with colon-separated labels.
  *
  * # What it must NOT know about
  * - Animation manager (completion is static)
@@ -72,55 +64,222 @@ export interface CompletionOptions {
   healthScore: number;
   /** Detected technologies with file counts. */
   technologies: { name: string; category: string; count?: number }[];
-  /** Number of strengths identified. */
-  strengthsCount: number;
-  /** Number of improvement suggestions. */
-  suggestionsCount: number;
-  /** Number of high-priority suggestions. */
-  highPriorityCount: number;
-  /** Analysis elapsed time in seconds. */
-  elapsed: number;
   /** Optional output file path for the report. */
   outputPath?: string;
 }
 
-// ─── Internal helpers ────────────────────────────────────────────
+// ─── Constants ───────────────────────────────────────────────────
+
+/** Width of the label column in character cells. Fits "Classification" (longest label). */
+const LABEL_WIDTH = 20;
+
+/** Width of the health bar in character cells. */
+const BAR_WIDTH = 24;
+
+// ─── Internal helpers (v2.2 patterns) ───────────────────────────
 
 /**
- * Build the inner content lines (plain text, no ANSI codes) for the
- * completion box. Each line is returned as plain text that will later
- * be styled and wrapped in a box.
- *
- * @param options - Completion data.
- * @param checkMark - The check mark character/symbol to use (theme-dependent).
+ * Maximum number of language lines inside the boxed dashboard.
+ * Derived from the 12-line content budget: 7 fixed lines (breathing,
+ * classification, maturity, health, gap, metrics, gap, breathing-bottom)
+ * leaves room for 4 language lines (3 languages + 1 overflow).
  */
-function _buildContentLines(options: CompletionOptions, checkMark: string): string[] {
-  const lines: string[] = [];
+const MAX_LANGUAGE_LINES = 3;
 
-  const indent = ' '; // 1 extra space beyond box padding (padding=1 gives total 2)
+/**
+ * Render a label-value pair with 20-char label column.
+ * Phase B: reused by stats screen.
+ *
+ * Contract:
+ *   Input:  label ("Classification"), value ("CLI Tool"), suffix ("87%")
+ *   Output: "Classification    CLI Tool                              87%"
+ *
+ * Label: padRight to 20 chars, bold (applied at caller level)
+ * Value: fills remaining space
+ * Suffix: padLeft to 6 chars, dim (applied at caller level)
+ */
+function renderLabelValue(label: string, value: string, suffix?: string): string {
+  const paddedLabel = label.padEnd(LABEL_WIDTH);
+  if (suffix) {
+    return paddedLabel + value + suffix.padStart(6);
+  }
+  return paddedLabel + value;
+}
 
-  // ── Metrics line ────────────────────────────────────────────────
-  lines.push(
-    `${indent}Files: ${options.totalFiles}   Dirs: ${options.totalDirectories}   ` +
-    `Size: ${formatSize(options.totalSize)}   Depth: ${options.maxDepth}`,
-  );
+// ─── Dashboard content builder ──────────────────────────────────
 
-  // ── Spacer ──────────────────────────────────────────────────────
-  lines.push('');
+/**
+ * Build the dashboard content as styled Lines.
+ *
+ * The layout follows the v2.2 specification:
+ * - Classification, Maturity, Health (with bar) — 20-char label column
+ * - Compact metrics line
+ * - Clean language list
+ * - Breathing whitespace between sections
+ *
+ * @param options      - Completion data.
+ * @param contentWidth - Usable content width inside the box.
+ * @param isNarrow     - Whether to use text-only layout.
+ * @returns Array of styled Lines for the dashboard.
+ */
+function buildDashboardLines(
+  options: CompletionOptions,
+  isNarrow: boolean,
+): Line[] {
+  if (isNarrow) {
+    return buildNarrowLines(options);
+  }
+  return buildBoxedLines(options);
+}
 
-  // ── Classification ──────────────────────────────────────────────
-  lines.push(
-    `${indent}Classification:  ${options.classification} (${options.classificationConfidence}%)`,
-  );
-  lines.push(
-    `${indent}Maturity:        ${options.maturity}`,
-  );
-  lines.push(
-    `${indent}Health Score:    ${options.healthScore}/100`,
-  );
+/**
+ * Build text-only lines for narrow terminals (< 60 columns).
+ * No box, no bar, no fancy alignment. Information preserved.
+ */
+function buildNarrowLines(options: CompletionOptions): Line[] {
+  const lines: Line[] = [];
 
-  // ── Spacer ──────────────────────────────────────────────────────
-  lines.push('');
+  // Project name header
+  lines.push({
+    segments: [{ text: `repo-map · ${options.projectName}` }],
+  });
+  lines.push({ segments: [{ text: '' }] });
+
+  // Classification
+  lines.push({
+    segments: [
+      { text: 'Classification: ', style: { bold: true } },
+      { text: `${options.classification} (${options.classificationConfidence}%)` },
+    ],
+  });
+
+  // Maturity
+  lines.push({
+    segments: [
+      { text: 'Maturity: ', style: { bold: true } },
+      { text: options.maturity },
+    ],
+  });
+
+  // Health (no bar — just the score)
+  lines.push({
+    segments: [
+      { text: 'Health: ', style: { bold: true } },
+      { text: `${options.healthScore}/100` },
+    ],
+  });
+
+  // Blank between sections
+  lines.push({ segments: [{ text: '' }] });
+
+  // Metrics
+  lines.push({
+    segments: [
+      {
+        text: `Files: ${options.totalFiles}  Dirs: ${options.totalDirectories}  Size: ${formatSize(options.totalSize)}  Depth: ${options.maxDepth}`,
+      },
+    ],
+  });
+
+  // Blank between sections
+  lines.push({ segments: [{ text: '' }] });
+
+  // Languages
+  const languages = options.technologies.filter(
+    (t) => t.category === 'language' && t.count !== undefined,
+  ) as { name: string; count: number }[];
+
+  if (languages.length > 0) {
+    const total = options.totalFiles || 1;
+    const visibleLangs = languages.slice(0, MAX_LANGUAGE_LINES);
+    const overflowCount = languages.length - visibleLangs.length;
+    const nameWidth = Math.max(...languages.map((l) => l.name.length));
+    const countWidth = Math.max(...languages.map((l) => String(l.count).length));
+
+    for (const lang of visibleLangs) {
+      const pct = Math.round((lang.count / total) * 100);
+      const paddedName = lang.name.padEnd(nameWidth);
+      const paddedCount = String(lang.count).padStart(countWidth);
+      lines.push({
+        segments: [{ text: `${paddedName}  ${paddedCount} files (${pct}%)` }],
+      });
+    }
+
+    if (overflowCount > 0) {
+      lines.push({
+        segments: [{ text: `+${overflowCount} more languages`, style: { dim: true } }],
+      });
+    }
+  } else {
+    lines.push({
+      segments: [{ text: 'No languages detected', style: { dim: true } }],
+    });
+  }
+
+  return lines;
+}
+
+/**
+ * Build styled lines for normal/wide terminals (boxed layout).
+ *
+ * Layout budget: 12 lines inside box (including breathing).
+ * Eye path: Classification → Health → Metrics → Languages
+ */
+function buildBoxedLines(options: CompletionOptions): Line[] {
+  const lines: Line[] = [];
+
+  // ── Breathing after top border ──────────────────────────────────
+  lines.push({ segments: [{ text: '' }] });
+
+  // ── Classification (focal point) ────────────────────────────────
+  lines.push({
+    segments: [
+      { text: 'Classification'.padEnd(LABEL_WIDTH), style: { bold: true } },
+      { text: options.classification },
+      { text: `${options.classificationConfidence}%`.padStart(6), style: { dim: true } },
+    ],
+  });
+
+  // ── Maturity ────────────────────────────────────────────────────
+  lines.push({
+    segments: [
+      { text: 'Maturity'.padEnd(LABEL_WIDTH), style: { bold: true } },
+      { text: options.maturity },
+    ],
+  });
+
+  // ── Health bar ──────────────────────────────────────────────────
+  const filledCount = Math.round((Math.max(0, Math.min(options.healthScore, 100)) / 100) * BAR_WIDTH);
+  const emptyCount = BAR_WIDTH - filledCount;
+  lines.push({
+    segments: [
+      { text: 'Health'.padEnd(LABEL_WIDTH), style: { bold: true } },
+      { text: '█'.repeat(filledCount), style: { color: 'bar-fill' } },
+      { text: '░'.repeat(emptyCount), style: { color: 'bar-empty' } },
+      { text: `  ${options.healthScore}/100`, style: { dim: true } },
+    ],
+  });
+
+  // ── Blank between sections ──────────────────────────────────────
+  lines.push({ segments: [{ text: '' }] });
+
+  // ── Compact metrics line (3-space gaps per spec §8) ─────────────
+  lines.push({
+    segments: [
+      { text: ' ' },
+      { text: 'Files', style: { bold: true } },
+      { text: `  ${options.totalFiles}   ` },
+      { text: 'Dirs', style: { bold: true } },
+      { text: `  ${options.totalDirectories}   ` },
+      { text: 'Size', style: { bold: true } },
+      { text: `  ${formatSize(options.totalSize)}   ` },
+      { text: 'Depth', style: { bold: true } },
+      { text: `  ${options.maxDepth}` },
+    ],
+  });
+
+  // ── Blank between sections ──────────────────────────────────────
+  lines.push({ segments: [{ text: '' }] });
 
   // ── Languages ───────────────────────────────────────────────────
   const languages = options.technologies.filter(
@@ -128,119 +287,36 @@ function _buildContentLines(options: CompletionOptions, checkMark: string): stri
   ) as { name: string; count: number }[];
 
   if (languages.length > 0) {
-    lines.push(`${indent}Languages`);
-
-    // Format each language row with aligned columns
-    const nameWidth = Math.max(
-      ...languages.map((l) => l.name.length),
-      10,
-    );
     const total = options.totalFiles || 1;
+    const visibleLangs = languages.slice(0, MAX_LANGUAGE_LINES);
+    const overflowCount = languages.length - visibleLangs.length;
+    const nameWidth = Math.max(...languages.map((l) => l.name.length));
+    const countWidth = Math.max(...languages.map((l) => String(l.count).length));
 
-    for (const lang of languages) {
-      const pct = ((lang.count / total) * 100).toFixed(1);
+    for (const lang of visibleLangs) {
+      const pct = Math.round((lang.count / total) * 100);
       const paddedName = lang.name.padEnd(nameWidth);
-      const paddedCount = String(lang.count).padStart(5);
-      const paddedPct = pct.padStart(5);
-      lines.push(`${indent}  ${paddedName}${paddedCount} files  (${paddedPct}%)`);
+      const paddedCount = String(lang.count).padStart(countWidth);
+      lines.push({
+        segments: [{ text: ` ${paddedName}  ${paddedCount} files (${pct}%)` }],
+      });
+    }
+
+    if (overflowCount > 0) {
+      lines.push({
+        segments: [{ text: `  +${overflowCount} more languages`, style: { dim: true } }],
+      });
     }
   } else {
-    lines.push(`${indent}Languages`);
-    lines.push(`${indent}  No languages detected`);
+    lines.push({
+      segments: [{ text: ' No languages detected', style: { dim: true } }],
+    });
   }
 
-  // ── Spacer ──────────────────────────────────────────────────────
-  lines.push('');
-
-  // ── Strengths & Suggestions ─────────────────────────────────────
-  lines.push(`${indent}${checkMark} ${options.strengthsCount} strengths identified`);
-  if (options.highPriorityCount > 0) {
-    lines.push(
-      `${indent}${checkMark} ${options.suggestionsCount} improvement suggestions ` +
-      `(${options.highPriorityCount} high priority)`,
-    );
-  } else {
-    lines.push(`${indent}${checkMark} ${options.suggestionsCount} improvement suggestions`);
-  }
-
-  // ── Spacer ──────────────────────────────────────────────────────
-  lines.push('');
-
-  // ── Elapsed time ────────────────────────────────────────────────
-  lines.push(`${indent}Completed in ${options.elapsed.toFixed(1)}s`);
-
-  // ── Bottom spacer ───────────────────────────────────────────────
-  lines.push('');
+  // ── Breathing before bottom border ──────────────────────────────
+  lines.push({ segments: [{ text: '' }] });
 
   return lines;
-}
-
-/**
- * Build the inner content as styled Lines for the renderer.
- * Each line is wrapped with the appropriate TextStyle tokens.
- */
-function _buildStyledLines(
-  contentLines: string[],
-  _options: CompletionOptions,
-): Line[] {
-  return contentLines.map((line) => {
-    // Empty lines (spacers) — pass through as plain segments
-    if (!line) {
-      return { segments: [{ text: line }] };
-    }
-
-    const trimmed = line.trimStart();
-
-    // Metrics line
-    if (trimmed.startsWith('Files:')) {
-      return buildSimpleLine(line);
-    }
-
-    // Classification / Maturity / Health Score — labels bold
-    if (
-      trimmed.startsWith('Classification:') ||
-      trimmed.startsWith('Maturity:') ||
-      trimmed.startsWith('Health Score:')
-    ) {
-      return { segments: [{ text: line, style: { bold: true } }] };
-    }
-
-    // Languages header — bold
-    if (trimmed === 'Languages') {
-      return { segments: [{ text: line, style: { bold: true } }] };
-    }
-
-    // "No languages detected" — dim
-    if (trimmed.startsWith('No languages detected')) {
-      return { segments: [{ text: line, style: { dim: true } }] };
-    }
-
-    // Strengths / Suggestions — success color
-    if (
-      trimmed.endsWith('strengths identified') ||
-      trimmed.endsWith('improvement suggestions') ||
-      trimmed.endsWith('high priority)')
-    ) {
-      return { segments: [{ text: line, style: { color: 'success' } }] };
-    }
-
-    // Elapsed — dim style
-    if (trimmed.startsWith('Completed in')) {
-      return { segments: [{ text: line, style: { dim: true } }] };
-    }
-
-    // Language rows — plain text
-    if (/^\s{2,}\S/.test(trimmed) && /\d+ files/.test(trimmed)) {
-      return buildSimpleLine(line);
-    }
-
-    // Fallback — plain text
-    return { segments: [{ text: line }] };
-  });
-}
-
-function buildSimpleLine(line: string): Line {
-  return { segments: [{ text: line }] };
 }
 
 // ─── Public API ──────────────────────────────────────────────────
@@ -248,7 +324,8 @@ function buildSimpleLine(line: string): Line {
 /**
  * Render the completion screen to stderr.
  *
- * Builds a professional summary box with all key analysis results.
+ * Builds a professional summary box with classification, health bar,
+ * compact metrics, and language breakdown.
  * On narrow terminals (< 60 columns), renders without box borders
  * for readability.
  *
@@ -264,12 +341,8 @@ export function renderCompletion(
   const contentWidth = width.contentWidth;
   const isNarrow = width.isNarrow;
 
-  // Build inner content as plain text using the theme's check mark symbol
-  const checkMark = renderer.theme.symbol('check');
-  const contentLines = _buildContentLines(options, checkMark);
-
-  // Style the content via the renderer
-  const styledLines = _buildStyledLines(contentLines, options);
+  // Build dashboard content as styled Lines
+  const styledLines = buildDashboardLines(options, isNarrow);
   const styledStrings = renderer.renderFrame(styledLines);
 
   if (isNarrow) {

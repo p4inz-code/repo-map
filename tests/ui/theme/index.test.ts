@@ -183,7 +183,7 @@ describe('theme.border()', () => {
 describe('theme.colors (pre-computed)', () => {
   it('contains all color tokens in default theme', () => {
     const theme = resolveTheme({ color: true, unicode: true });
-    const tokens = ['primary', 'success', 'warning', 'error', 'info', 'dim', 'muted', 'text', 'bg', 'heading', 'code', 'link', 'border'] as const;
+    const tokens = ['primary', 'success', 'warning', 'error', 'info', 'dim', 'muted', 'text', 'bg', 'heading', 'code', 'link', 'border', 'bar-fill', 'bar-empty'] as const;
     for (const token of tokens) {
       expect(theme.colors[token]).toBeDefined();
       expect(typeof theme.colors[token]).toBe('string');

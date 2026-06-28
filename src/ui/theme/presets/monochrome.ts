@@ -36,6 +36,7 @@ export const monochromeTheme: Theme = {
     primary: '', success: '', warning: '', error: '', info: '',
     dim: '\x1b[2m', muted: '', text: '', bg: '',
     heading: '\x1b[1m', code: '', link: '', border: '',
+    'bar-fill': '', 'bar-empty': '\x1b[2m',
   },
 
   symbols: {

@@ -103,6 +103,7 @@ describe('renderHelp', () => {
     expect(output).toContain('--exclude');
     expect(output).toContain('--include');
     expect(output).toContain('--stats');
+    expect(output).toContain('--suggest');
     expect(output).toContain('--no-color');
   });
 
@@ -120,5 +121,23 @@ describe('renderHelp', () => {
     const output = stderrSpy.mock.calls.map((c) => c[0] as string).join('');
     expect(output).toContain('codebuff.com/docs');
     expect(output).toContain('Full documentation');
+  });
+
+  // ── Narrow terminal ───────────────────────────────────────────
+
+  it('renders narrow layout with compact options on narrow terminals', () => {
+    const narrowWidth = makeWidthInfo({ columns: 50, contentWidth: 46, isNarrow: true, breakpoint: 'compact' });
+    const narrowRenderer = new Renderer(makeMockTheme(), narrowWidth);
+    renderHelp(narrowRenderer, '2.2.0');
+    const output = stderrSpy.mock.calls.map((c) => c[0] as string).join('');
+    // Should still contain all sections
+    expect(output).toContain('repo-map');
+    expect(output).toContain('USAGE');
+    expect(output).toContain('OPTIONS');
+    expect(output).toContain('EXAMPLES');
+    // Narrow mode uses compact option descriptions
+    expect(output).toContain('JSON output');
+    expect(output).toContain('Write to file');
+    expect(output).toContain('v2.2.0');
   });
 });

@@ -36,17 +36,11 @@ export async function run(argv: string[]): Promise<string> {
   try {
     pathStat = await fs.stat(rootPath);
   } catch {
-    throw new Error(
-      `Path does not exist: ${rootPath}\n` +
-        `Provide a valid path to a directory to scan, or run 'repo-map .' to scan the current directory.`,
-    );
+    throw new Error(`Path does not exist: ${rootPath}`);
   }
 
   if (!pathStat.isDirectory()) {
-    throw new Error(
-      `Path is not a directory: ${rootPath}\n` +
-        `repo-map scans directories, not individual files. Provide a directory path.`,
-    );
+    throw new Error(`Path is not a directory: ${rootPath}`);
   }
 
   const projectLabel = path.basename(rootPath);
@@ -85,12 +79,22 @@ export async function run(argv: string[]): Promise<string> {
     // 3. Format output
     if (options.stats) {
       // Render stats screen on stderr
-      ui.renderStats(analysis);
+      ui.renderStats(analysis, elapsed);
 
       // Return formatted stats for stdout
       return options.format === 'json'
         ? formatStatsJson(analysis)
         : formatStats(analysis);
+    }
+
+    if (options.suggest) {
+      // Render suggestions screen on stderr
+      ui.renderSuggest(analysis);
+
+      // Return formatted markdown for stdout
+      return options.format === 'json'
+        ? formatJson(analysis)
+        : formatMarkdown(analysis);
     }
 
     // Full completion — render summary box on stderr
@@ -103,12 +107,12 @@ export async function run(argv: string[]): Promise<string> {
     if (options.output) {
       await fs.mkdir(path.dirname(options.output), { recursive: true });
       await fs.writeFile(options.output, output, 'utf-8');
-      ui.renderCompletion(analysis, elapsed, options.output);
+      ui.renderCompletion(analysis, options.output);
       return `Output written to ${options.output}`;
     }
 
     // No output file — render completion and return the formatted string
-    ui.renderCompletion(analysis, elapsed);
+    ui.renderCompletion(analysis);
     return output;
   } finally {
     ui.close();

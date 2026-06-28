@@ -20,7 +20,9 @@ export type ColorToken =
   | 'heading'
   | 'code'
   | 'link'
-  | 'border';
+  | 'border'
+  | 'bar-fill'
+  | 'bar-empty';
 
 /**
  * Detected color capabilities of the terminal.
@@ -47,6 +49,8 @@ const ANSI_16: Record<ColorToken, string> = {
   code: '\x1b[33m',        // Yellow (stand out from body)
   link: '\x1b[4;94m',      // Underline + Blue
   border: '\x1b[2;90m',    // Dim + Gray
+  'bar-fill': '\x1b[92m',  // Bold Green
+  'bar-empty': '\x1b[2m',  // Dim
 };
 
 /**
@@ -67,6 +71,8 @@ const ANSI_256: Record<ColorToken, string> = {
   code: '\x1b[38;5;220m',     // Gold
   link: '\x1b[4;38;5;39m',    // Underline + Blue
   border: '\x1b[2;38;5;236m', // Dim + Gray
+  'bar-fill': '\x1b[38;5;82m',   // Bright Green
+  'bar-empty': '\x1b[38;5;242m', // Dark Gray
 };
 
 /**
@@ -87,6 +93,8 @@ const TRUECOLOR: Record<ColorToken, string> = {
   code: '\x1b[38;2;255;174;0m',      // #ffae00
   link: '\x1b[4;38;2;0;175;255m',    // Underline + #00afff
   border: '\x1b[2;38;2;48;48;48m',   // Dim + #303030
+  'bar-fill': '\x1b[38;2;0;255;94m',    // #00ff5e
+  'bar-empty': '\x1b[38;2;108;108;108m', // #6c6c6c
 };
 
 const RESET = '\x1b[0m';

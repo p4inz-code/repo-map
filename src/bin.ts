@@ -37,7 +37,12 @@ run(process.argv)
       message.includes('Path does not exist') ||
       message.includes('Path is not a directory')
     ) {
-      ui.reportError('Path Error', message);
+      ui.reportError(
+        message,
+        message.includes('Path does not exist')
+          ? "Provide a valid path to a directory, or run 'repo-map .' for the current one."
+          : 'repo-map scans directories, not individual files. Provide a directory path.',
+      );
       ui.close();
       process.exit(1);
     }
@@ -45,7 +50,6 @@ run(process.argv)
     // Permission errors
     if (errorCode === 'EACCES' || errorCode === 'EPERM' || errno === -13) {
       ui.reportError(
-        'Permission Denied',
         'Permission denied while scanning the directory.',
         'Try running with elevated permissions or scanning a directory you have access to.',
       );
@@ -56,7 +60,6 @@ run(process.argv)
     // Filesystem errors
     if (errorCode === 'ENOENT' || errno === -2) {
       ui.reportError(
-        'Filesystem Error',
         'Cannot read directory or file. The path may not exist or may be a broken symlink.',
       );
       ui.close();
@@ -66,7 +69,6 @@ run(process.argv)
     // Filesystem full
     if (errorCode === 'ENOSPC') {
       ui.reportError(
-        'Disk Full',
         'No space left on device.',
         'Free up disk space and try again.',
       );
@@ -77,7 +79,6 @@ run(process.argv)
     // File too large
     if (errorCode === 'EFBIG') {
       ui.reportError(
-        'File Too Large',
         'The scanner encountered an oversized file.',
       );
       ui.close();
@@ -87,7 +88,6 @@ run(process.argv)
     // Invalid argument / malformed path
     if (errorCode === 'EINVAL') {
       ui.reportError(
-        'Invalid Argument',
         'Invalid path or argument.',
         'Check the provided path and options.',
       );
@@ -96,7 +96,7 @@ run(process.argv)
     }
 
     // Fallback for unexpected errors
-    ui.reportError('Error', message);
+    ui.reportError(message);
     ui.close();
     process.exit(1);
   });

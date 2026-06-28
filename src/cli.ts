@@ -43,6 +43,7 @@ export function parseCliArgs(argv: string[]): CliOptions {
       [],
     )
     .option('--stats', 'Show quick repository statistics')
+    .option('--suggest', 'Show improvement suggestions')
     .option('--no-color', 'Disable ANSI color output')
     .parse(argv);
 
@@ -58,6 +59,7 @@ export function parseCliArgs(argv: string[]): CliOptions {
     exclude: opts.exclude?.length ? opts.exclude : undefined,
     include: opts.include?.length ? opts.include : undefined,
     stats: opts.stats ?? undefined,
+    suggest: opts.suggest ?? undefined,
     color: opts.color !== false,
   };
 }

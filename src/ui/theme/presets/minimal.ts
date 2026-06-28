@@ -32,6 +32,7 @@ export const minimalTheme: Theme = {
     primary: '', success: '', warning: '', error: '', info: '',
     dim: '', muted: '', text: '', bg: '',
     heading: '', code: '', link: '', border: '',
+    'bar-fill': '', 'bar-empty': '',
   },
 
   symbols: {

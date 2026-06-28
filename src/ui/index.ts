@@ -30,6 +30,7 @@ import { renderScanPhase, completeScanPhase } from './screens/scanning.js';
 import { renderAnalyzePhase, completeAnalyzePhase } from './screens/analyzing.js';
 import { renderCompletion, type CompletionOptions } from './screens/completion.js';
 import { renderStats, type StatsOptions } from './screens/stats.js';
+import { renderSuggest, type SuggestOptions } from './screens/suggest.js';
 import { renderHelp } from './screens/help.js';
 import { renderError, type ErrorOptions } from './screens/error.js';
 import { cursorShow } from './utils/ansi.js';
@@ -56,12 +57,13 @@ export interface UISession {
   finishAnalyzing(elapsed: number): void;
 
   // Output screens
-  renderCompletion(analysis: Analysis, elapsed: number, outputPath?: string): void;
-  renderStats(analysis: Analysis): void;
+  renderCompletion(analysis: Analysis, outputPath?: string): void;
+  renderStats(analysis: Analysis, elapsed: number): void;
+  renderSuggest(analysis: Analysis): void;
   renderHelp(): void;
 
   // Error
-  reportError(title: string, message: string, suggestion?: string): void;
+  reportError(message: string, suggestion?: string): void;
 
   // Lifecycle
   close(): void;
@@ -104,10 +106,8 @@ class UISessionImpl implements UISession {
 
   // ── Output screens ─────────────────────────────────────────────
 
-  renderCompletion(analysis: Analysis, elapsed: number, outputPath?: string): void {
+  renderCompletion(analysis: Analysis, outputPath?: string): void {
     const { stats, technologies, intelligence } = analysis;
-    const { strengths, suggestions } = intelligence;
-    const highPriorityCount = suggestions.filter((s) => s.priority === 'high').length;
 
     const completionOptions: CompletionOptions = {
       projectName: this._projectName,
@@ -120,17 +120,13 @@ class UISessionImpl implements UISession {
       maturity: intelligence.maturity.level,
       healthScore: intelligence.health.overall,
       technologies,
-      strengthsCount: strengths.length,
-      suggestionsCount: suggestions.length,
-      highPriorityCount,
-      elapsed,
       outputPath,
     };
 
     renderCompletion(completionOptions, this._renderer, this._renderer.width);
   }
 
-  renderStats(analysis: Analysis): void {
+  renderStats(analysis: Analysis, elapsed: number): void {
     const { stats, technologies } = analysis;
 
     // Extract language data
@@ -161,9 +157,25 @@ class UISessionImpl implements UISession {
         ? { path: stats.largestDirectory, files: stats.largestDirectoryFiles }
         : undefined,
       avgFilesPerDir: stats.avgFilesPerDirectory,
+      elapsed,
     };
 
     renderStats(statsOptions, this._renderer);
+  }
+
+  renderSuggest(analysis: Analysis): void {
+    const { intelligence } = analysis;
+
+    const suggestOptions: SuggestOptions = {
+      projectName: this._projectName,
+      strengths: intelligence.strengths.map((s) => ({ title: s.title })),
+      suggestions: intelligence.suggestions.map((s) => ({
+        title: s.title,
+        priority: s.priority,
+      })),
+    };
+
+    renderSuggest(suggestOptions, this._renderer);
   }
 
   renderHelp(): void {
@@ -172,12 +184,10 @@ class UISessionImpl implements UISession {
 
   // ── Error ──────────────────────────────────────────────────────
 
-  reportError(title: string, message: string, suggestion?: string): void {
+  reportError(message: string, suggestion?: string): void {
     const errorOptions: ErrorOptions = {
-      title,
       message,
       suggestion,
-      fatal: true,
     };
     renderError(errorOptions, this._renderer);
   }
