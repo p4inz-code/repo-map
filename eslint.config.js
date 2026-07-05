@@ -13,6 +13,12 @@ export default tseslint.config(
     },
   },
   {
+    files: ['tests/**/*.ts'],
+    rules: {
+      'no-control-regex': 'off',
+    },
+  },
+  {
     ignores: ['dist/', 'coverage/'],
   },
 );

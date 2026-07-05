@@ -1,4 +1,5 @@
-import type { FileEntry, Technology, Strength, MaturityEstimate, HealthScore } from '../types.js';
+import type { FileEntry, Technology } from '../types.js';
+import type { Strength, MaturityEstimate, HealthScore } from './types.js';
 
 /**
  * Generates project strengths based on detected features.

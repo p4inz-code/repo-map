@@ -1,4 +1,5 @@
-import type { FileEntry, Technology, ProjectClassification, ProjectCategory } from '../types.js';
+import type { FileEntry, Technology } from '../types.js';
+import type { ProjectClassification, ProjectCategory } from './types.js';
 
 /**
  * Classifies a repository into a project category with confidence score and evidence.
@@ -11,7 +12,6 @@ export function classifyProject(
   hasBinEntry: boolean,
   hasWorkspaces: boolean,
 ): ProjectClassification {
-  const evidence: string[] = [];
   const frameworkNames = technologies
     .filter((t) => t.category === 'framework')
     .map((t) => t.name);

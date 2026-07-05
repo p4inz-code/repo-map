@@ -1,4 +1,4 @@
-import type { RiskReport, DependencyGraph, ArchitectureSmell, ModuleAnalysis, CouplingResult, CohesionResult } from '../types.js';
+import type { RiskReport, DependencyGraph, ArchitectureSmell, ModuleAnalysis, CouplingResult, CohesionResult } from './types.js';
 
 /**
  * Generates a repository risk report.

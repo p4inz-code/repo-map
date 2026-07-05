@@ -40,6 +40,8 @@
 import { Renderer } from '../renderer.js';
 import type { Line } from '../renderer.js';
 import { renderBox } from '../primitives/box.js';
+import { renderLabelValue } from '../utils/index.js';
+import { sanitizeFilePath } from '../utils/ansi.js';
 
 // ─── Types ───────────────────────────────────────────────────────
 
@@ -67,26 +69,7 @@ export interface StatsOptions {
 }
 
 // ─── Constants ───────────────────────────────────────────────────
-
-/** Width of the label column in character cells. */
-const LABEL_WIDTH = 20;
-
-// ─── Internal helpers ───────────────────────────────────────────
-
-/**
- * Render a label-value pair with 20-char label column.
- * Reused from completion.ts pattern.
- *
- * Contract:
- *   Input:  label ("Largest file"), value ("src/app.ts (2.5 KB)")
- *   Output: "Largest file        src/app.ts (2.5 KB)"
- *
- * Label: padRight to 20 chars
- * Value: follows immediately after label
- */
-function renderLabelValue(label: string, value: string): string {
-  return label.padEnd(LABEL_WIDTH) + value;
-}
+// (LABEL_WIDTH is imported from shared utils)
 
 // ─── Content builders ──────────────────────────────────────────
 
@@ -160,14 +143,14 @@ function buildBoxedLines(options: StatsOptions): Line[] {
   if (options.largestFile) {
     lines.push({
       segments: [
-        { text: renderLabelValue('Largest file', `${options.largestFile.path} (${options.largestFile.size})`) },
+        { text: renderLabelValue('Largest file', `${sanitizeFilePath(options.largestFile.path)} (${options.largestFile.size})`) },
       ],
     });
   }
   if (options.largestDir) {
     lines.push({
       segments: [
-        { text: renderLabelValue('Largest dir', `${options.largestDir.path} (${options.largestDir.files} files)`) },
+        { text: renderLabelValue('Largest dir', `${sanitizeFilePath(options.largestDir.path)} (${options.largestDir.files} files)`) },
       ],
     });
   }
@@ -197,7 +180,7 @@ function buildNarrowLines(options: StatsOptions): Line[] {
 
   // Project name header
   lines.push({
-    segments: [{ text: `repo-map · ${options.projectName} · stats` }],
+    segments: [{ text: `repo-map · ${sanitizeFilePath(options.projectName)} · stats` }],
   });
   lines.push({ segments: [{ text: '' }] });
 
@@ -235,12 +218,12 @@ function buildNarrowLines(options: StatsOptions): Line[] {
   // Largest file/dir
   if (options.largestFile) {
     lines.push({
-      segments: [{ text: `Largest file: ${options.largestFile.path} (${options.largestFile.size})` }],
+      segments: [{ text: `Largest file: ${sanitizeFilePath(options.largestFile.path)} (${options.largestFile.size})` }],
     });
   }
   if (options.largestDir) {
     lines.push({
-      segments: [{ text: `Largest dir: ${options.largestDir.path} (${options.largestDir.files} files)` }],
+      segments: [{ text: `Largest dir: ${sanitizeFilePath(options.largestDir.path)} (${options.largestDir.files} files)` }],
     });
   }
 
@@ -283,10 +266,10 @@ export function renderStats(options: StatsOptions, renderer: Renderer): void {
     }
   } else {
     const border = renderer.theme.border('round');
-    const boxWidth = Math.min(contentWidth + 4, renderer.width.columns);
+    const boxWidth = Math.min(contentWidth + 2, renderer.width.columns);
 
     const boxLines = renderBox(styledStrings, {
-      title: `repo-map · ${options.projectName} · stats`,
+      title: `repo-map · ${sanitizeFilePath(options.projectName)} · stats`,
       width: boxWidth,
       padding: 1,
       border: border.tl ? border : undefined,

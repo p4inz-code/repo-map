@@ -1,4 +1,5 @@
-import type { ArchitectureSmell, FileEntry, DependencyGraph } from '../types.js';
+import type { FileEntry } from '../types.js';
+import type { ArchitectureSmell, DependencyGraph } from './types.js';
 import type { ImportParseResult } from './import-parser.js';
 
 /**

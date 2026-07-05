@@ -1,4 +1,5 @@
-import type { Suggestion, BuildPipeline, DependencyAnalysis, FileEntry, Technology } from '../types.js';
+import type { FileEntry, Technology } from '../types.js';
+import type { Suggestion, BuildPipeline, DependencyAnalysis } from './types.js';
 
 /**
  * Generates intelligent improvement suggestions based on detected gaps.

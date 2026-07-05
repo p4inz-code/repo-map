@@ -1,4 +1,4 @@
-import type { ImportAnalysis, ImportStat, DependencyGraph } from '../types.js';
+import type { DependencyGraph, ImportAnalysis } from './types.js';
 import type { ImportParseResult } from './import-parser.js';
 
 /**
@@ -9,8 +9,6 @@ export function analyzeImports(
   imports: ImportParseResult[],
   graph: DependencyGraph,
 ): ImportAnalysis {
-  const allPaths = new Set(imports.map((i) => i.path));
-
   // Build import counts: how many other files import each module
   const importCounts = new Map<string, { count: number; importedBy: string[] }>();
 

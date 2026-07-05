@@ -41,9 +41,11 @@ function makeMockTheme(): Theme {
     },
     symbol: (token: SymbolToken) => {
       if (token === 'check') return '✓';
+      if (token === 'cross') return '✗';
+      if (token === 'bullet') return '·';
       return token;
     },
-    border: (style: BorderStyle): BorderChars => ({
+    border: (_style: BorderStyle): BorderChars => ({
       tl: '╭', tr: '╮', bl: '╰', br: '╯', h: '─', v: '│',
     }),
     colors: { primary: '', success: MOCK_ANSI_GREEN, error: MOCK_ANSI_RED, warning: MOCK_ANSI_YELLOW, info: '', dim: MOCK_ANSI_DIM, muted: '', text: '', bg: '', heading: '', code: '', link: '', border: '' },

@@ -277,7 +277,7 @@ export function detectFrameworksFromConfigs(
       FRAMEWORK_BY_RUBY_GEM,
     )) {
       if (technologies.some((t) => t.name === frameworkName)) continue;
-      const pattern = new RegExp(`gem ['\"]${gem}['\"]`, 'i');
+      const pattern = new RegExp(`gem ['"]${gem}['"]`, 'i');
       if (pattern.test(configs.gemfile)) {
         technologies.push({
           name: frameworkName,

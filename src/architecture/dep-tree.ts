@@ -1,4 +1,5 @@
-import type { VisualDepTree, DependencyGraph } from '../types.js';
+import type { VisualDepTree, DependencyGraph } from './types.js';
+import { sanitizeFilePath } from '../ui/utils/ansi.js';
 
 /**
  * Generates a visual dependency tree in markdown format.
@@ -68,6 +69,6 @@ function formatModuleName(path: string): string {
   // Strip extension and show last 2 path components
   const name = path.replace(/\.[a-z]+$/i, '');
   const parts = name.split('/');
-  if (parts.length <= 2) return name;
-  return '.../' + parts.slice(-2).join('/');
+  const result = parts.length <= 2 ? name : '.../' + parts.slice(-2).join('/');
+  return sanitizeFilePath(result);
 }

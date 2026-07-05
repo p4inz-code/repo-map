@@ -2,3 +2,8 @@ node_modules/
 dist/
 *.tsbuildinfo
 coverage/
+
+# Generated output artifacts
+report.md
+report.json
+result.json

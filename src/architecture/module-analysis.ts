@@ -1,4 +1,5 @@
-import type { FileEntry, ModuleAnalysis, LargestModule } from '../types.js';
+import type { FileEntry } from '../types.js';
+import type { ModuleAnalysis, LargestModule } from './types.js';
 
 /**
  * Analyzes the largest files and folders in the codebase.

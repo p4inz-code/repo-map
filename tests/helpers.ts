@@ -1,5 +1,6 @@
-import type { Intelligence, Analysis, ArchitectureAnalysis } from '../src/types.js';
+import type { FullIntelligence, Analysis } from '../src/types.js';
 import { CURRENT_SCHEMA_VERSION, CLI_VERSION } from '../src/types.js';
+import type { ArchitectureAnalysis } from '../src/architecture/types.js';
 
 /**
  * Creates a complete mock ArchitectureAnalysis object for use in tests.
@@ -71,7 +72,7 @@ export function createMockArchitecture(): ArchitectureAnalysis {
 /**
  * Creates a complete mock Intelligence object for use in tests.
  */
-export function createMockIntelligence(): Intelligence {
+export function createMockIntelligence(): FullIntelligence {
   return {
     classification: {
       category: 'Unknown',

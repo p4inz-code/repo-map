@@ -1,4 +1,5 @@
-import type { FileEntry, Technology, MaturityEstimate, MaturityLevel } from '../types.js';
+import type { FileEntry, Technology } from '../types.js';
+import type { MaturityEstimate, MaturityLevel } from './types.js';
 
 /**
  * Estimates project maturity based on structural indicators.

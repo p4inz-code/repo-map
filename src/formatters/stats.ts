@@ -1,5 +1,6 @@
 import type { Analysis } from '../types.js';
 import { formatSize } from '../utils.js';
+import { sanitizeFilePath } from '../ui/utils/ansi.js';
 
 /**
  * Formats an Analysis result as a compact statistics summary.
@@ -41,10 +42,10 @@ export function formatStats(analysis: Analysis): string {
 
   // Additional stats
   if (stats.largestFile) {
-    lines.push(`Largest file:    ${stats.largestFile} (${formatSize(stats.largestFileSize)})`);
+    lines.push(`Largest file:    ${sanitizeFilePath(stats.largestFile)} (${formatSize(stats.largestFileSize)})`);
   }
   if (stats.largestDirectory) {
-    lines.push(`Largest dir:     ${stats.largestDirectory} (${stats.largestDirectoryFiles} files)`);
+    lines.push(`Largest dir:     ${sanitizeFilePath(stats.largestDirectory)} (${stats.largestDirectoryFiles} files)`);
   }
   if (stats.avgFilesPerDirectory > 0) {
     lines.push(`Avg files/dir:   ${stats.avgFilesPerDirectory}`);

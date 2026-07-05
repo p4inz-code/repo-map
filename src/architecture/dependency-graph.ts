@@ -1,5 +1,40 @@
-import type { DependencyGraph, ModuleNode } from '../types.js';
+import type { DependencyGraph, ModuleNode } from './types.js';
 import type { ImportParseResult } from './import-parser.js';
+
+/**
+ * Resolves an import target to an actual file path by trying common
+ * extensions and index file patterns.
+ *
+ * Order of resolution:
+ *   1. Exact match
+ *   2. Bare extensions: .ts, .tsx, .js, .jsx, .mjs, .cjs, .py, .rs, .go, .kt
+ *   3. Index files: foo/index.ts, foo/index.tsx, foo/index.js, foo/index.jsx,
+ *      foo/index.mjs, foo/index.cjs
+ *
+ * Returns the resolved path if found, or the original target if unresolved.
+ * Self-imports and ambiguous basename-only matches are NOT resolved
+ * (see Repository Intelligence Principle #1).
+ */
+function resolveModulePath(target: string, allPaths: Set<string>): string {
+  if (allPaths.has(target)) return target;
+
+  // Bare extension checks (in priority order)
+  const bareExtensions = ['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs', '.py', '.rs', '.go', '.kt'];
+  for (const ext of bareExtensions) {
+    if (allPaths.has(target + ext)) return target + ext;
+  }
+
+  // Index file resolution (directory imports like 'src/utils' → 'src/utils/index.ts')
+  const indexPatterns = [
+    '/index.ts', '/index.tsx', '/index.js', '/index.jsx',
+    '/index.mjs', '/index.cjs',
+  ];
+  for (const pattern of indexPatterns) {
+    if (allPaths.has(target + pattern)) return target + pattern;
+  }
+
+  return target;
+}
 
 /**
  * Builds a module dependency graph from parsed import data.
@@ -29,45 +64,11 @@ export function buildDependencyGraph(imports: ImportParseResult[]): DependencyGr
     if (!fromNode) continue;
 
     for (const target of imp.internalImports) {
-      // Try to match the import to an actual file in the project
-      let resolvedPath = target;
-
+      // Resolve the import target using the shared resolution helper.
       // Try exact match first — no basename-only fallback is performed.
       // Ambiguous module name matching would create incorrect dependency edges.
-      // Unresolved imports are preserved as diagnostics rather than becoming
-      // speculative edges. See Repository Intelligence Principle #1.
-      if (allPaths.has(target)) {
-        resolvedPath = target;
-      } else if (allPaths.has(target + '.ts')) {
-        resolvedPath = target + '.ts';
-      } else if (allPaths.has(target + '.tsx')) {
-        resolvedPath = target + '.tsx';
-      } else if (allPaths.has(target + '.js')) {
-        resolvedPath = target + '.js';
-      } else if (allPaths.has(target + '.jsx')) {
-        resolvedPath = target + '.jsx';
-      } else if (allPaths.has(target + '/index.ts')) {
-        resolvedPath = target + '/index.ts';
-      } else if (allPaths.has(target + '/index.js')) {
-        resolvedPath = target + '/index.js';
-      } else if (allPaths.has(target + '.py')) {
-        resolvedPath = target + '.py';
-      } else if (allPaths.has(target + '.rs')) {
-        resolvedPath = target + '.rs';
-      } else if (allPaths.has(target + '.go')) {
-        resolvedPath = target + '.go';
-      } else if (allPaths.has(target + '.kt')) {
-        resolvedPath = target + '.kt';
-      } else if (allPaths.has(target + '.mjs')) {
-        resolvedPath = target + '.mjs';
-      } else if (allPaths.has(target + '.cjs')) {
-        resolvedPath = target + '.cjs';
-      }
-      // NOTE: No basename-only fallback here by design.
-      // Ambiguous module name matching (e.g., matching 'helper' to any file named
-      // 'helper.ts' in the project) would create incorrect dependency edges.
-      // Unresolved imports are preserved as diagnostics rather than becoming
-      // speculative edges. See Repository Intelligence Principle #1.
+      // See resolveModulePath docs for details.
+      const resolvedPath = resolveModulePath(target, allPaths);
 
       // Skip self-imports and imports that couldn't be resolved
       if (resolvedPath === imp.path) continue;

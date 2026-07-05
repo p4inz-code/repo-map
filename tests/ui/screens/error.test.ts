@@ -3,7 +3,6 @@ import { Renderer } from '../../../src/ui/renderer.js';
 import { setForcedWidth } from '../../../src/ui/layout/width.js';
 import {
   renderError,
-  type ErrorOptions,
 } from '../../../src/ui/screens/error.js';
 import type { Theme, TextStyle, ColorToken, SymbolToken, BorderStyle, BorderChars } from '../../../src/ui/theme/index.js';
 import type { WidthInfo } from '../../../src/ui/layout/width.js';
@@ -11,7 +10,6 @@ import type { WidthInfo } from '../../../src/ui/layout/width.js';
 // ─── Mock Theme ──────────────────────────────────────────────────
 
 const MOCK_ANSI_RED = '\x1b[31m';
-const MOCK_ANSI_RESET = '\x1b[0m';
 const MOCK_ANSI_DIM = '\x1b[2m';
 
 function makeMockTheme(): Theme {
@@ -38,7 +36,7 @@ function makeMockTheme(): Theme {
       if (token === 'arrow') return '→';
       return token;
     },
-    border: (style: BorderStyle): BorderChars => ({
+    border: (_style: BorderStyle): BorderChars => ({
       tl: '╭', tr: '╮', bl: '╰', br: '╯', h: '─', v: '│',
     }),
     colors: { primary: '', success: '', error: MOCK_ANSI_RED, warning: '', info: '', dim: MOCK_ANSI_DIM, muted: '', text: '', bg: '', heading: '', code: '', link: '', border: '' },

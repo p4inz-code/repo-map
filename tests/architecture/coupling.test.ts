@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { analyzeCoupling } from '../../src/architecture/coupling.js';
-import type { DependencyGraph } from '../../src/types.js';
+import type { DependencyGraph } from '../../src/architecture/types.js';
 
 function makeGraph(nodes: { path: string; importedBy: number; imports: number }[]): DependencyGraph {
   return {

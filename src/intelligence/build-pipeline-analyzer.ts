@@ -1,4 +1,5 @@
-import type { FileEntry, Technology, BuildPipeline } from '../types.js';
+import type { FileEntry, Technology } from '../types.js';
+import type { BuildPipeline } from './types.js';
 
 /**
  * Analyzes the build pipeline from scanned files and technologies.

@@ -2,7 +2,7 @@ import { createDefaultRegistry } from './detectors/index.js';
 import { generateTree } from './tree.js';
 import { generateArchitecture } from './architecture.js';
 import { CURRENT_SCHEMA_VERSION, CLI_VERSION } from '../types.js';
-import type { FileEntry, Analysis, Technology } from '../types.js';
+import type { FileEntry, Analysis, Technology, FullIntelligence } from '../types.js';
 import type { ScanStats } from '../types.js';
 import path from 'node:path';
 import { runIntelligence } from '../intelligence/index.js';
@@ -60,14 +60,57 @@ export async function analyze(options: AnalyzeOptions): Promise<Analysis> {
     }
   }
 
+  // Pre-compute coverage config flag for health scoring
+  // (lightweight static file content inspection)
+  let hasCoverageConfig = false;
+  if (packageJsonContent) {
+    // Check package.json scripts and config for coverage keywords
+    const scripts = packageJsonContent.scripts as Record<string, string> | undefined;
+    if (scripts) {
+      for (const cmd of Object.values(scripts)) {
+        if (typeof cmd === 'string' && (cmd.includes('--coverage') || cmd.includes('coverage'))) {
+          hasCoverageConfig = true;
+          break;
+        }
+      }
+    }
+    const config = packageJsonContent.config as Record<string, unknown> | undefined;
+    if (config && !hasCoverageConfig) {
+      if ('coverage' in config || 'nyc' in config || 'c8' in config || 'istanbul' in config) {
+        hasCoverageConfig = true;
+      }
+    }
+  }
+  if (!hasCoverageConfig) {
+    // Check vitest.config.*, vite.config.*, jest.config.* for coverage keywords
+    for (const pattern of ['vitest.config.', 'vite.config.', 'jest.config.']) {
+      const configFile = files.find((f) => f.relativePath.startsWith(pattern));
+      if (configFile) {
+        try {
+          const content = await fileCache.read(configFile.path);
+          if (content && (content.includes('coverage') || content.includes('istanbul') || content.includes('c8') || content.includes('nyc'))) {
+            hasCoverageConfig = true;
+            break;
+          }
+        } catch {
+          // Ignore read errors
+        }
+      }
+    }
+  }
+
   // Intelligence engine (classification, maturity, health, etc.)
-  const intelligence = await runIntelligence(files, technologies, packageJsonContent);
+  const baseIntelligence = await runIntelligence(files, technologies, packageJsonContent, { hasCoverageConfig });
 
   // Architecture analysis (patterns, dependency graph, smells, etc.)
+  // Always run — all data is in-memory cached, no additional I/O.
   const architectureAnalysis = await runArchitectureAnalysis(files);
 
-  // Merge architecture into intelligence
-  intelligence.architecture = architectureAnalysis;
+  // Construct the final intelligence with type-safe architecture presence
+  const intelligence: FullIntelligence = {
+    ...baseIntelligence,
+    architecture: architectureAnalysis,
+  };
 
   const generatedAt = new Date().toISOString();
 

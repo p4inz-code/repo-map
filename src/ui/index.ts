@@ -49,9 +49,11 @@ export interface UISessionOptions {
   terminalWidth?: number;
 }
 
+export type ScanProgressCallback = (progress: { files: number; dirs: number }) => void;
+
 export interface UISession {
   // Progress phases
-  startScanning(projectName: string): void;
+  startScanning(projectName: string): ScanProgressCallback;
   finishScanning(files: number, dirs: number): void;
   startAnalyzing(): void;
   finishAnalyzing(elapsed: number): void;
@@ -87,9 +89,10 @@ class UISessionImpl implements UISession {
 
   // ── Progress phases ────────────────────────────────────────────
 
-  startScanning(projectName: string): void {
+  startScanning(projectName: string): ScanProgressCallback {
     this._projectName = projectName;
-    renderScanPhase(this._renderer, this._manager, { projectName });
+    const { updateProgress } = renderScanPhase(this._renderer, this._manager, { projectName });
+    return updateProgress;
   }
 
   finishScanning(files: number, dirs: number): void {

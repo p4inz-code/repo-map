@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { Renderer } from '../../../src/ui/renderer.js';
 import { setForcedWidth } from '../../../src/ui/layout/width.js';
 import { renderHelp } from '../../../src/ui/screens/help.js';
-import type { Theme, TextStyle, ColorToken, SymbolToken, BorderStyle, BorderChars } from '../../../src/ui/theme/index.js';
+import type { Theme, TextStyle, SymbolToken, BorderStyle, BorderChars } from '../../../src/ui/theme/index.js';
 import type { WidthInfo } from '../../../src/ui/layout/width.js';
 
 // ─── Mock Theme ──────────────────────────────────────────────────
@@ -16,7 +16,7 @@ function makeMockTheme(): Theme {
       return text;
     },
     symbol: (token: SymbolToken) => token,
-    border: (style: BorderStyle): BorderChars => ({
+    border: (_style: BorderStyle): BorderChars => ({
       tl: '╭', tr: '╮', bl: '╰', br: '╯', h: '─', v: '│',
     }),
     colors: { primary: '', success: '', error: '', warning: '', info: '', dim: '', muted: '', text: '', bg: '', heading: '', code: '', link: '', border: '' },

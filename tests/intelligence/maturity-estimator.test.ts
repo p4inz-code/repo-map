@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { estimateMaturity } from '../../src/intelligence/maturity-estimator.js';
-import type { FileEntry, Technology } from '../../src/types.js';
+import type { FileEntry } from '../../src/types.js';
 
 function file(relativePath: string): FileEntry {
   return { path: `/repo/${relativePath}`, relativePath, size: 100, isDirectory: false };

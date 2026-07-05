@@ -50,7 +50,7 @@ export async function run(argv: string[]): Promise<string> {
 
   try {
     // 1. Scan with progress UI
-    ui.startScanning(projectLabel);
+    const updateScanProgress = ui.startScanning(projectLabel);
 
     const scanResult = await scanDirectory({
       rootPath,
@@ -58,6 +58,7 @@ export async function run(argv: string[]): Promise<string> {
       maxDepth: options.depth,
       excludePatterns: options.exclude,
       includePatterns: options.include,
+      onProgress: updateScanProgress,
     });
 
     ui.finishScanning(scanResult.stats.totalFiles, scanResult.stats.totalDirectories);

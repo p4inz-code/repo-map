@@ -1,4 +1,4 @@
-import type { DependencyAnalysis, DependencyGroup } from '../types.js';
+import type { DependencyAnalysis, DependencyGroup } from './types.js';
 
 /**
  * Analyzes dependencies from package.json.

@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { detectArchitecturePatterns } from '../../src/architecture/pattern-detector.js';
-import type { FileEntry, DependencyGraph } from '../../src/types.js';
+import type { FileEntry } from '../../src/types.js';
+import type { DependencyGraph } from '../../src/architecture/types.js';
 
 function file(relativePath: string): FileEntry {
   return { path: `/repo/${relativePath}`, relativePath, size: 100, isDirectory: false };

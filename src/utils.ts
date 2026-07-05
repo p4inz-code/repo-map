@@ -1,6 +1,22 @@
 import type { FileEntry } from './types.js';
 
 /**
+ * Centralized color decision logic.
+ * Returns `false` if NO_COLOR is set (via env var or `--no-color` flag).
+ *
+ * This is the SINGLE source of truth for color decisions across the
+ * entire CLI. Every renderer and every error path must use this helper.
+ *
+ * @param argv - Optional CLI args to check for `--no-color` flag.
+ *               Used by early error paths before CLI options are parsed.
+ */
+export function isColorEnabled(argv?: string[]): boolean {
+  if (process.env.NO_COLOR === '1' || process.env.NO_COLOR === 'true') return false;
+  if (argv && argv.includes('--no-color')) return false;
+  return true;
+}
+
+/**
  * Formats byte size into a human-readable string.
  */
 export function formatSize(bytes: number): string {

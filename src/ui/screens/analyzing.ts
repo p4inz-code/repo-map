@@ -20,6 +20,7 @@
 import { Renderer } from '../renderer.js';
 import { AnimationManager } from '../animation/index.js';
 import { SpinnerAnimation } from '../animation/spinner.js';
+import { cursorHide } from '../utils/ansi.js';
 
 // ─── Module-level state ──────────────────────────────────────────
 
@@ -55,7 +56,8 @@ export function renderAnalyzePhase(
   const spinner = new SpinnerAnimation('Analyzing...');
   manager.register(spinner);
 
-  // Render the first frame directly (synchronously).
+  // Hide cursor and render the first frame directly (synchronously).
+  process.stderr.write(cursorHide());
   const initialFrame = spinner.tick(80);
   const initialLines = renderer.renderFrame([
     { segments: [{ text: initialFrame!.lines[0] }] },
@@ -104,10 +106,11 @@ export function completeAnalyzePhase(
   manager.stop();
 
   // Render the completion line with success styling.
+  const checkSymbol = renderer.theme.symbol('check');
   const completionLines = renderer.renderFrame([
     {
       segments: [
-        { text: '✓ ', style: { color: 'success' } },
+        { text: `${checkSymbol} `, style: { color: 'success' } },
         { text: `Done in ${elapsed.toFixed(1)}s` },
       ],
     },

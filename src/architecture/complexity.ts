@@ -1,4 +1,5 @@
-import type { ComplexityScore, FileEntry, DependencyGraph } from '../types.js';
+import type { FileEntry } from '../types.js';
+import type { ComplexityScore, DependencyGraph } from './types.js';
 import type { ImportParseResult } from './import-parser.js';
 import { fileCache } from '../file-cache.js';
 import { processBatch } from '../batch.js';

@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { generateInsights } from '../../src/intelligence/insights-generator.js';
-import type { FileEntry, Technology, BuildPipeline, DirectoryRole } from '../../src/types.js';
+import type { FileEntry } from '../../src/types.js';
+import type { BuildPipeline } from '../../src/intelligence/types.js';
 
 function file(relativePath: string): FileEntry {
   return { path: `/repo/${relativePath}`, relativePath, size: 100, isDirectory: false };

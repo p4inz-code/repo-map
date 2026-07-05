@@ -1,4 +1,4 @@
-import type { RefactorSuggestion, ArchitectureSmell, CircularDependency, LayerViolation, ModuleAnalysis, DependencyGraph } from '../types.js';
+import type { RefactorSuggestion, ArchitectureSmell, CircularDependency, LayerViolation, ModuleAnalysis, DependencyGraph } from './types.js';
 
 /**
  * Generates actionable refactor suggestions based on analysis results.
@@ -9,7 +9,7 @@ export function generateRefactorSuggestions(
   circularDeps: CircularDependency[],
   layerViolations: LayerViolation[],
   moduleAnalysis: ModuleAnalysis,
-  graph: DependencyGraph,
+  _graph: DependencyGraph,
 ): RefactorSuggestion[] {
   const suggestions: RefactorSuggestion[] = [];
 

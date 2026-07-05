@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { calculateArchScore } from '../../src/architecture/arch-score.js';
-import type { CouplingResult, CohesionResult } from '../../src/types.js';
+import type { CouplingResult, CohesionResult } from '../../src/architecture/types.js';
 
 describe('calculateArchScore', () => {
   const goodCoupling: CouplingResult = { level: 'Low', score: 25, explanation: '', details: [] };

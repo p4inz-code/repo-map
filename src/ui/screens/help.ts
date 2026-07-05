@@ -98,6 +98,11 @@ function renderNarrowHelp(
   });
   allLines.push({ segments: [{ text: '' }] });
 
+  // ── Description (preserved from wide layout) ─────────────────────
+  allLines.push({ segments: [{ text: '  Scan any codebase, detect technologies, and' }] });
+  allLines.push({ segments: [{ text: '  generate comprehensive architecture reports.' }] });
+  allLines.push({ segments: [{ text: '' }] });
+
   // ── USAGE ────────────────────────────────────────────────────────
   allLines.push({ segments: [{ text: 'USAGE', style: { bold: true } }] });
   allLines.push({ segments: [{ text: '  $ repo-map [path] [options]' }] });

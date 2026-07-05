@@ -5,7 +5,7 @@ import {
   renderStats,
   type StatsOptions,
 } from '../../../src/ui/screens/stats.js';
-import type { Theme, TextStyle, ColorToken, SymbolToken, BorderStyle, BorderChars } from '../../../src/ui/theme/index.js';
+import type { Theme, TextStyle, SymbolToken, BorderStyle, BorderChars } from '../../../src/ui/theme/index.js';
 import type { WidthInfo } from '../../../src/ui/layout/width.js';
 
 // ─── Mock Theme ──────────────────────────────────────────────────
@@ -31,7 +31,7 @@ function makeMockTheme(): Theme {
       if (token === 'check') return '✓';
       return token;
     },
-    border: (style: BorderStyle): BorderChars => ({
+    border: (_style: BorderStyle): BorderChars => ({
       tl: '╭', tr: '╮', bl: '╰', br: '╯', h: '─', v: '│',
     }),
     colors: { primary: '', success: '', error: '', warning: '', info: '', dim: MOCK_ANSI_DIM, muted: '', text: '', bg: '', heading: '', code: '', link: '', border: '' },

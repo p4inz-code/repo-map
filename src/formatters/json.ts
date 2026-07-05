@@ -2,13 +2,41 @@ import type { Analysis } from '../types.js';
 import { CURRENT_SCHEMA_VERSION, CLI_VERSION } from '../types.js';
 
 /**
+ * Internal options for controlling JSON output.
+ * All options default to `true` for backward compatibility.
+ */
+export interface JsonFormatOptions {
+  /**
+   * Include the full architecture markdown string.
+   * When `false`, the top-level `architecture` field is omitted
+   * (reducing payload size when only structured data is needed).
+   * Default: `true`.
+   */
+  includeArchitectureString?: boolean;
+
+  /**
+   * Include the full dependency graph (nodes with imports/importedBy,
+   * and all edges) instead of just summary counts.
+   * Default: `false` to keep default output compact.
+   */
+  includeFullGraph?: boolean;
+}
+
+/**
  * Formats an Analysis result as a stable, well-structured JSON string.
  *
  * Exports structured objects for every analysis component, including
  * all intelligence data — everything is machine-readable.
+ *
+ * @param analysis - The analysis result to format.
+ * @param opts     - Optional formatting options (all default to backward-compatible values).
  */
-export function formatJson(analysis: Analysis): string {
+export function formatJson(analysis: Analysis, opts?: JsonFormatOptions): string {
   const { technologies, intelligence } = analysis;
+
+  // Options with defaults
+  const includeArch = opts?.includeArchitectureString ?? true;
+  const includeGraph = opts?.includeFullGraph ?? false;
 
   // Sort technologies by category then name
   const sortedTechnologies = [...technologies].sort((a, b) => {
@@ -57,18 +85,20 @@ export function formatJson(analysis: Analysis): string {
       strengths: intelligence.strengths,
       suggestions: intelligence.suggestions,
       insights: intelligence.insights,
-      architecture: intelligence.architecture ? {
+      architecture: {
         patterns: intelligence.architecture.patterns,
-        dependencyGraph: {
-          nodes: intelligence.architecture.dependencyGraph.nodes.length,
-          edges: intelligence.architecture.dependencyGraph.edges.length,
-          centralModules: intelligence.architecture.dependencyGraph.centralModules,
-          leafModules: intelligence.architecture.dependencyGraph.leafModules,
-          hubModules: intelligence.architecture.dependencyGraph.hubModules,
-          isolatedModules: intelligence.architecture.dependencyGraph.isolatedModules,
-          sharedUtilities: intelligence.architecture.dependencyGraph.sharedUtilities,
-          coreModules: intelligence.architecture.dependencyGraph.coreModules,
-        },
+        dependencyGraph: includeGraph
+          ? intelligence.architecture.dependencyGraph
+          : {
+              nodes: intelligence.architecture.dependencyGraph.nodes.length,
+              edges: intelligence.architecture.dependencyGraph.edges.length,
+              centralModules: intelligence.architecture.dependencyGraph.centralModules,
+              leafModules: intelligence.architecture.dependencyGraph.leafModules,
+              hubModules: intelligence.architecture.dependencyGraph.hubModules,
+              isolatedModules: intelligence.architecture.dependencyGraph.isolatedModules,
+              sharedUtilities: intelligence.architecture.dependencyGraph.sharedUtilities,
+              coreModules: intelligence.architecture.dependencyGraph.coreModules,
+            },
         circularDependencies: intelligence.architecture.circularDependencies,
         smells: intelligence.architecture.smells,
         importAnalysis: intelligence.architecture.importAnalysis,
@@ -81,9 +111,9 @@ export function formatJson(analysis: Analysis): string {
         visualDepTree: intelligence.architecture.visualDepTree,
         archScore: intelligence.architecture.archScore,
         refactorSuggestions: intelligence.architecture.refactorSuggestions,
-      } : null,
+      },
     },
-    architecture: analysis.architecture,
+    ...(includeArch ? { architecture: analysis.architecture } : {}),
   };
 
   return JSON.stringify(output, null, 2);

@@ -1,5 +1,11 @@
-import type { FileEntry, ArchitectureAnalysis, DependencyGraph } from '../types.js';
+// Re-export architecture-specific types from the module-scoped types file
+export type * from './types.js';
+
+import type { FileEntry } from '../types.js';
+import type { ArchitectureAnalysis } from './types.js';
 import { parseFileImports } from './import-parser.js';
+
+
 import { buildDependencyGraph } from './dependency-graph.js';
 import { detectArchitecturePatterns } from './pattern-detector.js';
 import { detectCircularDependencies } from './circular-deps.js';
@@ -64,7 +70,6 @@ export async function runArchitectureAnalysis(files: FileEntry[]): Promise<Archi
   const visualDepTree = generateVisualDepTree(dependencyGraph);
 
   // 14. Calculate architectural score
-  const hasPatterns = patterns.length > 0;
   const hasLayers = patterns.some((p) => p.name.includes('Layered') || p.name.includes('MVC') || p.name.includes('Hexagonal'));
   const hasGoodOrg = allDirs.length >= 3;
   const hasGoodSeparation = allDirs.length >= 4;

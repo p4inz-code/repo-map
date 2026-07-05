@@ -8,6 +8,7 @@ const ALL_TOKENS: ColorToken[] = [
   'bar-fill', 'bar-empty',
 ];
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const ALL_MODES: ColorMode[] = ['none', '16', '256', 'truecolor'];
 
 /** Stub process.stdout.isTTY for the duration of a test callback. */

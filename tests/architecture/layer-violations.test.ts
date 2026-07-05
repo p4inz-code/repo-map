@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { detectLayerViolations } from '../../src/architecture/layer-violations.js';
-import type { FileEntry, DependencyGraph } from '../../src/types.js';
+import type { DependencyGraph } from '../../src/architecture/types.js';
 
 describe('detectLayerViolations', () => {
   it('detects UI importing infrastructure', () => {

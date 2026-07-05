@@ -81,4 +81,49 @@ describe('formatJson', () => {
     expect(parsed.stats.totalFiles).toBe(5);
     expect(parsed.stats.scannedPath).toBe('/tmp/test');
   });
+
+  // ── MEDIUM 4: Architecture string option ──
+
+  it('includes architecture string by default', () => {
+    const analysis = createMockAnalysis();
+    const result = formatJson(analysis);
+    const parsed = JSON.parse(result);
+    expect(parsed.architecture).toBe('# Test Project\n\nA test project.');
+  });
+
+  it('omits architecture string when includeArchitectureString is false', () => {
+    const analysis = createMockAnalysis();
+    const result = formatJson(analysis, { includeArchitectureString: false });
+    const parsed = JSON.parse(result);
+    expect(parsed.architecture).toBeUndefined();
+    // All other fields should still be present
+    expect(parsed.projectName).toBe('test-project');
+    expect(parsed.stats).toBeDefined();
+    expect(parsed.intelligence).toBeDefined();
+  });
+
+  // ── MEDIUM 5: Full graph option ──
+
+  it('outputs summary dependency graph by default', () => {
+    const analysis = createMockAnalysis();
+    const result = formatJson(analysis);
+    const parsed = JSON.parse(result);
+    const graph = parsed.intelligence.architecture.dependencyGraph;
+    // Default: summary counts (numbers), not full nodes/edges
+    expect(typeof graph.nodes).toBe('number');
+    expect(typeof graph.edges).toBe('number');
+  });
+
+  it('includes full dependency graph when includeFullGraph is true', () => {
+    const analysis = createMockAnalysis();
+    const result = formatJson(analysis, { includeFullGraph: true });
+    const parsed = JSON.parse(result);
+    const graph = parsed.intelligence.architecture.dependencyGraph;
+    // Full graph: nodes is an array, edges is an array
+    expect(Array.isArray(graph.nodes)).toBe(true);
+    expect(Array.isArray(graph.edges)).toBe(true);
+    // Summary properties should NOT be present as numbers
+    // (they're either inside the node objects or available as array length)
+    expect(typeof graph.centralModules).toBe('object');
+  });
 });

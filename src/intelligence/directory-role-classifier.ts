@@ -1,4 +1,5 @@
-import type { FileEntry, DirectoryRole } from '../types.js';
+import type { FileEntry } from '../types.js';
+import type { DirectoryRole } from './types.js';
 
 /**
  * Classifies top-level directories into roles based on common conventions.

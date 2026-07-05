@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { generateSuggestions } from '../../src/intelligence/suggestions-generator.js';
-import type { BuildPipeline, DependencyAnalysis } from '../../src/types.js';
+import type { BuildPipeline, DependencyAnalysis } from '../../src/intelligence/types.js';
 
 function emptyPipeline(): BuildPipeline {
   return {

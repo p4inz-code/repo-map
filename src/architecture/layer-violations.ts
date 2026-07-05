@@ -1,4 +1,5 @@
-import type { LayerViolation, DependencyGraph, FileEntry } from '../types.js';
+import type { FileEntry } from '../types.js';
+import type { DependencyGraph, LayerViolation } from './types.js';
 
 /**
  * Detects layer violations based on directory naming conventions and import patterns.

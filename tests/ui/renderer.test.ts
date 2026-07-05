@@ -28,7 +28,7 @@ function makeMockTheme(): Theme {
       return `${prefix}${text}${MOCK_ANSI_RESET}`;
     },
     symbol: (token: SymbolToken) => token === 'check' ? '✓' : token,
-    border: (style: BorderStyle): BorderChars => ({
+    border: (_style: BorderStyle): BorderChars => ({
       tl: '╭', tr: '╮', bl: '╰', br: '╯', h: '─', v: '│',
     }),
     colors: { primary: '', success: MOCK_ANSI_GREEN, error: MOCK_ANSI_RED, warning: '', info: '', dim: '', muted: '', text: '', bg: '', heading: '', code: '', link: '', border: '' },

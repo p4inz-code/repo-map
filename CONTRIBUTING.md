@@ -33,7 +33,7 @@ npm install
 
 ### Testing
 
-- 783+ automated tests must pass before merge
+- 862+ automated tests must pass before merge
 - Unit tests for each detector and utility
 - Integration tests for scanner and analyzer
 - End-to-end tests for the full pipeline

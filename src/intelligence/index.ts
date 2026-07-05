@@ -1,4 +1,7 @@
-import type { FileEntry, Technology, Intelligence, BuildPipeline, DependencyAnalysis } from '../types.js';
+// Re-export intelligence-specific types from the module-scoped types file
+export type * from './types.js';
+
+import type { FileEntry, Technology, Intelligence } from '../types.js';
 import { classifyProject } from './project-classifier.js';
 import { estimateMaturity } from './maturity-estimator.js';
 import { calculateHealth } from './health-scorer.js';
@@ -18,10 +21,10 @@ export async function runIntelligence(
   files: FileEntry[],
   technologies: Technology[],
   packageJsonContent: Record<string, unknown> | null,
+  extra?: { hasCoverageConfig?: boolean },
 ): Promise<Intelligence> {
   // Pre-compute common flags used across multiple modules
   const norm = (p: string) => p.replace(/\\/g, '/');
-  const filePaths = files.filter((f) => !f.isDirectory).map((f) => norm(f.relativePath));
 
   const hasLicense = files.some((f) => {
     const r = f.relativePath;
@@ -90,7 +93,7 @@ export async function runIntelligence(
   );
 
   // 3. Health Score
-  const health = calculateHealth(files);
+  const health = calculateHealth(files, { hasCoverageConfig: extra?.hasCoverageConfig });
 
   // 4. Entry Points
   const entryPoints = detectEntryPoints(files, technologies, packageJsonContent);

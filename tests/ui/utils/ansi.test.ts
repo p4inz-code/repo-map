@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import {
   cursorUp,
   cursorDown,
@@ -13,6 +13,7 @@ import {
   isWindowsLegacy,
   stripAnsi,
   visibleLength,
+  sanitizeFilePath,
 } from '../../../src/ui/utils/ansi.js';
 
 // ─── Helpers ─────────────────────────────────────────────────────
@@ -397,6 +398,178 @@ describe('visibleLength', () => {
     const input = '\x1b[1mStatus: 完成\x1b[0m';
     // "Status: " = 8 chars, "完成" = 4 cells (2×2), total = 12
     expect(visibleLength(input)).toBe(12);
+  });
+
+  // ── LOW 2: Unicode ranges ──
+
+  it('counts Hangul Jamo as 2 cells each', () => {
+    // U+1100–U+11FF range
+    const jamo = '\u1100\u1161\u11a8'; // ᄀ ᅡ ᆨ (Korean Jamo)
+    expect(visibleLength(jamo)).toBe(6);
+  });
+
+  it('counts Hangul Jamo Extended-A as 2 cells each', () => {
+    // U+A960–U+A97C range
+    expect(visibleLength('\ua960')).toBe(2);
+  });
+
+  it('counts Hangul Jamo Extended-B as 2 cells each', () => {
+    // U+D7B0–U+D7FF range
+    expect(visibleLength('\ud7b0')).toBe(2);
+  });
+
+  it('counts CJK Radicals Supplement as 2 cells each', () => {
+    // U+2E80–U+2EFF range
+    expect(visibleLength('\u2e80')).toBe(2);
+  });
+
+  it('counts Kangxi Radicals as 2 cells each', () => {
+    // U+2F00–U+2FDF range
+    expect(visibleLength('\u2f00')).toBe(2);
+  });
+
+  it('counts Ideographic Description Characters as 2 cells each', () => {
+    // U+2FF0–U+2FFF range
+    expect(visibleLength('\u2ff0')).toBe(2);
+  });
+
+  it('counts CJK Symbols and Punctuation as 2 cells each (including fullwidth space)', () => {
+    // U+3000 is fullwidth space: U+3000–U+303F
+    expect(visibleLength('\u3000')).toBe(2); // Fullwidth space
+    expect(visibleLength('\u3001')).toBe(2); // Ideographic comma
+  });
+
+  it('counts Enclosed CJK Letters and Months as 2 cells each', () => {
+    // U+3200–U+32FF range
+    expect(visibleLength('\u3200')).toBe(2);
+  });
+
+  it('counts CJK Compatibility as 2 cells each', () => {
+    // U+3300–U+33FF range
+    expect(visibleLength('\u3300')).toBe(2);
+  });
+
+  it('counts CJK Extension C characters as 2 cells each', () => {
+    // U+2B820–U+2CEAF range
+    expect(visibleLength('\u{2b820}')).toBe(2);
+  });
+
+  it('counts CJK Extension D characters as 2 cells each', () => {
+    // U+2CEB0–U+2EBE0 range
+    expect(visibleLength('\u{2ceb0}')).toBe(2);
+  });
+
+  it('counts CJK Compatibility Ideographs Supplement as 2 cells each', () => {
+    // U+2F800–U+2FA1F range
+    expect(visibleLength('\u{2f800}')).toBe(2);
+  });
+});
+
+// =================================================================
+// Sanitize File Path (ANSI Injection Prevention)
+// =================================================================
+
+describe('sanitizeFilePath', () => {
+  it('removes ANSI color codes from a file name', () => {
+    expect(sanitizeFilePath('\x1b[31mHACKED\x1b[0m.txt')).toBe('HACKED.txt');
+  });
+
+  it('removes cursor movement sequences from a path', () => {
+    expect(sanitizeFilePath('\x1b[1Aup\x1b[1Bdown')).toBe('updown');
+  });
+
+  it('removes OSC hyperlink sequences', () => {
+    expect(sanitizeFilePath('\x1b]8;;https://evil.com\x07click\x1b]8;;\x07.txt')).toBe('click.txt');
+  });
+
+  it('removes malformed escape sequences', () => {
+    // Truncated CSI with no final byte
+    expect(sanitizeFilePath('file\x1b[')).toBe('file\x1b[');
+    // Just ESC character
+    expect(sanitizeFilePath('file\x1b')).toBe('file\x1b');
+  });
+
+  it('preserves normal Unicode filenames', () => {
+    expect(sanitizeFilePath('src/index.ts')).toBe('src/index.ts');
+    expect(sanitizeFilePath('中文文件名')).toBe('中文文件名');
+    expect(sanitizeFilePath('ファイル名.txt')).toBe('ファイル名.txt');
+    expect(sanitizeFilePath('résumé.md')).toBe('résumé.md');
+  });
+
+  it('preserves Windows-style paths', () => {
+    expect(sanitizeFilePath('src\\components\\Button.tsx')).toBe('src\\components\\Button.tsx');
+    expect(sanitizeFilePath('C:\\Users\\test\\file.ts')).toBe('C:\\Users\\test\\file.ts');
+  });
+
+  it('preserves Linux/Mac paths', () => {
+    expect(sanitizeFilePath('/usr/local/bin/node')).toBe('/usr/local/bin/node');
+    expect(sanitizeFilePath('./relative/path/to/file.ts')).toBe('./relative/path/to/file.ts');
+    expect(sanitizeFilePath('~/config/settings.json')).toBe('~/config/settings.json');
+  });
+
+  it('removes ANSI from deeply nested paths', () => {
+    const injected = '\x1b[32msrc\x1b[0m/\x1b[31mcomponents\x1b[0m/Button.tsx';
+    expect(sanitizeFilePath(injected)).toBe('src/components/Button.tsx');
+  });
+
+  it('removes multiple ANSI sequences from a single path', () => {
+    const injected = '\x1b[1m\x1b[31m\x1b[42mcolorful\x1b[0m.txt';
+    expect(sanitizeFilePath(injected)).toBe('colorful.txt');
+  });
+
+  it('removes cursor hide/show sequences', () => {
+    expect(sanitizeFilePath('\x1b[?25lhidden\x1b[?25h')).toBe('hidden');
+  });
+
+  it('removes clear screen and erase sequences', () => {
+    expect(sanitizeFilePath('\x1b[2Jfile\x1b[2K')).toBe('file');
+  });
+
+  it('removes truecolor sequences', () => {
+    expect(sanitizeFilePath('\x1b[38;2;255;0;0mred.txt')).toBe('red.txt');
+  });
+
+  it('removes 256-color sequences', () => {
+    expect(sanitizeFilePath('\x1b[38;5;196mfile.ts')).toBe('file.ts');
+  });
+
+  it('removes save/restore cursor position', () => {
+    expect(sanitizeFilePath('\x1b[sfile\x1b[u')).toBe('file');
+  });
+
+  it('handles empty string input', () => {
+    expect(sanitizeFilePath('')).toBe('');
+  });
+
+  it('preserves plain text unchanged', () => {
+    const text = 'a-very-long-and-complex-file-name.with.multiple.dots.ts';
+    expect(sanitizeFilePath(text)).toBe(text);
+  });
+
+  it('removes OSC sequences terminated by ST', () => {
+    expect(sanitizeFilePath('\x1b]0;title\x1b\\file.ts')).toBe('file.ts');
+  });
+
+  it('removes two-byte escape sequences', () => {
+    // Two-byte sequences: ESC followed by a letter (A-Z, a-z)
+    expect(sanitizeFilePath('\x1bMfile.ts')).toBe('file.ts');
+    expect(sanitizeFilePath('\x1bDfile.ts')).toBe('file.ts');
+    expect(sanitizeFilePath('\x1bEfile.ts')).toBe('file.ts');
+    expect(sanitizeFilePath('\x1bHfile.ts')).toBe('file.ts');
+    expect(sanitizeFilePath('\x1bZfile.ts')).toBe('file.ts');
+  });
+
+  it('is idempotent when called multiple times', () => {
+    const injected = '\x1b[31mHACKED\x1b[0m.txt';
+    const once = sanitizeFilePath(injected);
+    const twice = sanitizeFilePath(once);
+    expect(once).toBe('HACKED.txt');
+    expect(twice).toBe(once);
+  });
+
+  it('preserves carriage returns in path (not ANSI)', () => {
+    // \r is not stripped by sanitizeFilePath — it preserves printable content
+    expect(sanitizeFilePath('file\rname.ts')).toBe('file\rname.ts');
   });
 });
 

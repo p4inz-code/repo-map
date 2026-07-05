@@ -13,7 +13,7 @@ If you discover a security vulnerability in repo-map, please report it responsib
 
 **Do not open a public GitHub issue for security vulnerabilities.**
 
-Instead, please email: https://github.com/p4inz-code/repo-map/issues
+Instead, please open a security advisory at: https://github.com/p4inz-code/repo-map/security/advisories/new
 
 Include the following in your report:
 

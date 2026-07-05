@@ -1,11 +1,24 @@
-import type { FileEntry, HealthScore, HealthScoreCategory } from '../types.js';
+import type { FileEntry } from '../types.js';
+import type { HealthScore, HealthScoreCategory } from './types.js';
 import { hasLinterConfig, hasFormatterConfig, hasTestFiles } from '../utils.js';
+
+/**
+ * Optional flags to supplement health scoring.
+ */
+export interface HealthScoreOptions {
+  /**
+   * Whether a coverage configuration was detected via static file content
+   * inspection (e.g., vitest.config.*, jest.config.*, package.json scripts).
+   * When true, the Testing category receives a coverage bonus.
+   */
+  hasCoverageConfig?: boolean;
+}
 
 /**
  * Calculates codebase health score across 8 categories.
  * Pure function — operates on scanned file data only.
  */
-export function calculateHealth(files: FileEntry[]): HealthScore {
+export function calculateHealth(files: FileEntry[], options?: HealthScoreOptions): HealthScore {
   const categories: HealthScoreCategory[] = [];
 
   // Helper to normalize path
@@ -89,12 +102,12 @@ export function calculateHealth(files: FileEntry[]): HealthScore {
              r === 'cypress.config.js' || r === 'playwright.config.ts';
     });
 
-    // Bonus for coverage configuration (dedicated coverage config files)
-    // Note: vitest.config.* is NOT checked here — it is already covered by
-    // hasTestConfig to avoid double-counting the same config file.
-    // A true coverage config check would need to inspect file content for
-    // coverage settings (e.g., `--coverage` flag, `istanbul` configuration).
-    const hasCoverageConfig = files.some((f) => {
+    // Detect coverage configuration from either:
+    // 1. Standalone coverage config files (.nycrc, .c8rc, .istanbul.yml, etc.)
+    // 2. Pre-computed flag from static file content inspection
+    //    (vitest.config.*, vite.config.*, jest.config.*, package.json)
+    //    computed in the intelligence pipeline.
+    const hasCoverageConfig = options?.hasCoverageConfig ?? files.some((f) => {
       const r = f.relativePath;
       return r === '.nycrc' || r === '.nycrc.json' || r === '.nycrc.yaml' ||
              r === '.c8rc' || r === '.c8rc.json' || r === '.istanbul.yml';
@@ -268,9 +281,7 @@ export function calculateHealth(files: FileEntry[]): HealthScore {
     // Check for standard directory conventions
     const hasSrc = filePaths.some((p) => p.startsWith('src/'));
     const hasTest = filePaths.some((p) => p.startsWith('test/') || p.startsWith('tests/') || p.includes('/__tests__/'));
-    const hasConfig = filePaths.some((p) => p.startsWith('config/'));
     const hasScripts = filePaths.some((p) => p.startsWith('scripts/'));
-    const hasDist = filePaths.some((p) => p.startsWith('dist/') || p.startsWith('build/') || p.startsWith('out/'));
 
     if (!hasSrc && filePaths.length > 3) { score -= 15; deductions.push('No src/ directory for source code'); }
     if (!hasTest && filePaths.length > 5) { score -= 10; deductions.push('No tests/ directory'); }

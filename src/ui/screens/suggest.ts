@@ -38,6 +38,7 @@ import { Renderer } from '../renderer.js';
 import type { Line } from '../renderer.js';
 import type { ColorToken } from '../theme/index.js';
 import { renderBox } from '../primitives/box.js';
+import { sanitizeFilePath } from '../utils/ansi.js';
 
 // ─── Types ───────────────────────────────────────────────────────
 
@@ -55,6 +56,39 @@ export interface SuggestOptions {
   suggestions: (SuggestItem & { priority: 'high' | 'medium' | 'low' })[];
 }
 
+// ─── Internal helpers ──────────────────────────────────────────
+
+/** Priority sort order: high=0, medium=1, low=2. */
+const PRIORITY_ORDER: Record<'high' | 'medium' | 'low', number> = {
+  high: 0,
+  medium: 1,
+  low: 2,
+};
+
+/**
+ * Get the marker character and style for a suggestion priority level.
+ *
+ * Per spec §3.3:
+ * - High priority: ✗ in red (error)
+ * - Medium priority: ! in yellow (warning)
+ * - Low priority: · in dim
+ *
+ * Uses theme.symbol() for proper Unicode/ASCII fallback.
+ */
+function getSuggestionMarker(
+  priority: 'high' | 'medium' | 'low',
+  renderer: Renderer,
+): { marker: string; style: { color?: ColorToken; dim?: boolean } } {
+  switch (priority) {
+    case 'high':
+      return { marker: renderer.theme.symbol('cross'), style: { color: 'error' } };
+    case 'medium':
+      return { marker: '!', style: { color: 'warning' } };
+    case 'low':
+      return { marker: renderer.theme.symbol('bullet'), style: { dim: true } };
+  }
+}
+
 // ─── Content builders ──────────────────────────────────────────
 
 /**
@@ -63,8 +97,9 @@ export interface SuggestOptions {
  * Layout budget: 20 lines inside box (including breathing).
  * Eye path: Strengths → Suggestions
  */
-function buildBoxedLines(options: SuggestOptions): Line[] {
+function buildBoxedLines(options: SuggestOptions, renderer: Renderer): Line[] {
   const lines: Line[] = [];
+  const checkSymbol = renderer.theme.symbol('check');
 
   // ── Breathing after top border ──────────────────────────────────
   lines.push({ segments: [{ text: '' }] });
@@ -79,7 +114,7 @@ function buildBoxedLines(options: SuggestOptions): Line[] {
     for (const strength of options.strengths) {
       lines.push({
         segments: [
-          { text: ' ✓ ', style: { color: 'success' } },
+          { text: ` ${checkSymbol} `, style: { color: 'success' } },
           { text: strength.title },
         ],
       });
@@ -104,7 +139,7 @@ function buildBoxedLines(options: SuggestOptions): Line[] {
   );
   if (sortedSuggestions.length > 0) {
     for (const suggestion of sortedSuggestions) {
-      const { marker, style } = getSuggestionMarker(suggestion.priority);
+      const { marker, style } = getSuggestionMarker(suggestion.priority, renderer);
       lines.push({
         segments: [
           { text: ` ${marker} `, style },
@@ -128,12 +163,13 @@ function buildBoxedLines(options: SuggestOptions): Line[] {
  * Build text-only lines for narrow terminals (< 60 columns).
  * No box. Information preserved.
  */
-function buildNarrowLines(options: SuggestOptions): Line[] {
+function buildNarrowLines(options: SuggestOptions, renderer: Renderer): Line[] {
   const lines: Line[] = [];
+  const checkSymbol = renderer.theme.symbol('check');
 
   // Project name header
   lines.push({
-    segments: [{ text: `repo-map · ${options.projectName} · suggestions` }],
+    segments: [{ text: `repo-map · ${sanitizeFilePath(options.projectName)} · suggestions` }],
   });
   lines.push({ segments: [{ text: '' }] });
 
@@ -146,7 +182,7 @@ function buildNarrowLines(options: SuggestOptions): Line[] {
     for (const strength of options.strengths) {
       lines.push({
         segments: [
-          { text: '✓ ', style: { color: 'success' } },
+          { text: `${checkSymbol} `, style: { color: 'success' } },
           { text: strength.title },
         ],
       });
@@ -169,7 +205,7 @@ function buildNarrowLines(options: SuggestOptions): Line[] {
   );
   if (sortedSuggestions.length > 0) {
     for (const suggestion of sortedSuggestions) {
-      const { marker, style } = getSuggestionMarker(suggestion.priority);
+      const { marker, style } = getSuggestionMarker(suggestion.priority, renderer);
       lines.push({
         segments: [
           { text: `${marker} `, style },
@@ -184,36 +220,6 @@ function buildNarrowLines(options: SuggestOptions): Line[] {
   }
 
   return lines;
-}
-
-// ─── Internal helpers ──────────────────────────────────────────
-
-/** Priority sort order: high=0, medium=1, low=2. */
-const PRIORITY_ORDER: Record<'high' | 'medium' | 'low', number> = {
-  high: 0,
-  medium: 1,
-  low: 2,
-};
-
-/**
- * Get the marker character and style for a suggestion priority level.
- *
- * Per spec §3.3:
- * - High priority: ✗ in red (error)
- * - Medium priority: ! in yellow (warning)
- * - Low priority: · in dim
- */
-function getSuggestionMarker(
-  priority: 'high' | 'medium' | 'low',
-): { marker: string; style: { color?: ColorToken; dim?: boolean } } {
-  switch (priority) {
-    case 'high':
-      return { marker: '✗', style: { color: 'error' } };
-    case 'medium':
-      return { marker: '!', style: { color: 'warning' } };
-    case 'low':
-      return { marker: '·', style: { dim: true } };
-  }
 }
 
 // ─── Public API ──────────────────────────────────────────────────
@@ -232,8 +238,8 @@ export function renderSuggest(options: SuggestOptions, renderer: Renderer): void
   const isNarrow = renderer.width.isNarrow;
 
   const styledLines = isNarrow
-    ? buildNarrowLines(options)
-    : buildBoxedLines(options);
+    ? buildNarrowLines(options, renderer)
+    : buildBoxedLines(options, renderer);
   const styledStrings = renderer.renderFrame(styledLines);
 
   if (isNarrow) {
@@ -242,10 +248,10 @@ export function renderSuggest(options: SuggestOptions, renderer: Renderer): void
     }
   } else {
     const border = renderer.theme.border('round');
-    const boxWidth = Math.min(contentWidth + 4, renderer.width.columns);
+    const boxWidth = Math.min(contentWidth + 2, renderer.width.columns);
 
     const boxLines = renderBox(styledStrings, {
-      title: `repo-map · ${options.projectName} · suggestions`,
+      title: `repo-map · ${sanitizeFilePath(options.projectName)} · suggestions`,
       width: boxWidth,
       padding: 1,
       border: border.tl ? border : undefined,

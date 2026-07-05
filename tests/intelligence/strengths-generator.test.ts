@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { generateStrengths } from '../../src/intelligence/strengths-generator.js';
-import type { FileEntry, Technology, MaturityEstimate, HealthScore } from '../../src/types.js';
+import type { FileEntry, Technology } from '../../src/types.js';
+import type { MaturityEstimate, HealthScore } from '../../src/intelligence/types.js';
 
 function file(relativePath: string): FileEntry {
   return { path: `/repo/${relativePath}`, relativePath, size: 100, isDirectory: false };

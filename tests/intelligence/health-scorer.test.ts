@@ -6,6 +6,7 @@ function file(relativePath: string): FileEntry {
   return { path: `/repo/${relativePath}`, relativePath, size: 100, isDirectory: false };
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function dir(relativePath: string): FileEntry {
   return { path: `/repo/${relativePath}`, relativePath, size: 0, isDirectory: true };
 }
@@ -76,5 +77,36 @@ describe('calculateHealth', () => {
     const result = calculateHealth([file('.eslintrc.json')]);
     const consistency = result.categories.find((c) => c.name === 'Consistency');
     expect(consistency!.deductions.length).toBeLessThan(2);
+  });
+
+  // ── MEDIUM 6: Coverage detection via options ──
+
+  it('applies coverage bonus when hasCoverageConfig is set via options', () => {
+    // With test files present and coverage config, score should get a bonus
+    const files = [file('src/app.test.ts'), file('src/utils.spec.ts')];
+    const withCoverage = calculateHealth(files, { hasCoverageConfig: true });
+    const withoutCoverage = calculateHealth(files);
+
+    const testingWith = withCoverage.categories.find((c) => c.name === 'Testing')!;
+    const testingWithout = withoutCoverage.categories.find((c) => c.name === 'Testing')!;
+
+    // Coverage config should raise the score
+    expect(testingWith.score).toBeGreaterThan(testingWithout.score);
+  });
+
+  it('still detects standalone coverage config files without options', () => {
+    // Files like .nycrc should still be detected via filename check
+    const files = [file('src/app.test.ts'), file('.nycrc')];
+    const result = calculateHealth(files);
+    const testing = result.categories.find((c) => c.name === 'Testing')!;
+    // Should have coverage bonus from .nycrc
+    expect(testing.score).toBeGreaterThan(0);
+  });
+
+  it('falls back to filename check when options are undefined', () => {
+    const files = [file('src/app.test.ts'), file('.istanbul.yml')];
+    const result = calculateHealth(files, undefined);
+    const testing = result.categories.find((c) => c.name === 'Testing')!;
+    expect(testing.score).toBeGreaterThan(0);
   });
 });

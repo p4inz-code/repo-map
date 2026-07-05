@@ -35,7 +35,7 @@ function makeMockTheme(): Theme {
       return `${prefix}${text}${suffix}`;
     },
     symbol: (token: SymbolToken) => token === 'check' ? '✓' : token,
-    border: (style: BorderStyle): BorderChars => ({
+    border: (_style: BorderStyle): BorderChars => ({
       tl: '╭', tr: '╮', bl: '╰', br: '╯', h: '─', v: '│',
     }),
     colors: { primary: '', success: MOCK_ANSI_GREEN, error: '', warning: '', info: '', dim: MOCK_ANSI_DIM, muted: '', text: '', bg: '', heading: '', code: '', link: '', border: '', 'bar-fill': MOCK_ANSI_GREEN, 'bar-empty': MOCK_ANSI_DIM },

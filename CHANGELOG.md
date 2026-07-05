@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [2.2.0] - 2025-01-01
+## [2.2.0] - 2026-07-04
 
 ### Added
 
@@ -25,7 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Width detection** — Terminal width detection with narrow/normal/wide breakpoints and forced override for testing
 - **Suggest flag** — `--suggest` option added to CLI argument parser
 - **Stats elapsed time** — Elapsed time now displayed in stats screen
-- **783+ automated tests** — Comprehensive coverage across all screens, animations, theme presets, and edge cases
+- **862+ automated tests** — Comprehensive coverage across all screens, animations, theme presets, and edge cases
 
 ### Changed
 
@@ -43,7 +43,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Dead `renderBar()` function removed from completion screen
 - Unused `elapsed` parameter removed from `UISession.renderCompletion()` interface
 
-## [2.1.0] - 2025-01-01
+## [2.1.0] - 2025-06-15
 
 ### Added
 
@@ -69,7 +69,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - SIGINT handling
 - CI/CD workflow with multi-node testing
 
-## [1.0.0] - 2025-01-01
+## [1.0.0] - 2025-03-01
 
 ### Added
 

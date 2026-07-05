@@ -1,4 +1,5 @@
-import type { ArchitecturePattern, FileEntry, DependencyGraph } from '../types.js';
+import type { FileEntry } from '../types.js';
+import type { ArchitecturePattern, DependencyGraph } from './types.js';
 import type { ImportParseResult } from './import-parser.js';
 
 /**
@@ -7,8 +8,8 @@ import type { ImportParseResult } from './import-parser.js';
  */
 export function detectArchitecturePatterns(
   files: FileEntry[],
-  graph: DependencyGraph,
-  imports: ImportParseResult[],
+  _graph: DependencyGraph,
+  _imports: ImportParseResult[],
 ): ArchitecturePattern[] {
   const patterns: ArchitecturePattern[] = [];
   const norm = (p: string) => p.replace(/\\/g, '/');

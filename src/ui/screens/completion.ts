@@ -39,7 +39,9 @@ import { Renderer } from '../renderer.js';
 import type { Line } from '../renderer.js';
 import type { WidthInfo } from '../layout/width.js';
 import { renderBox } from '../primitives/box.js';
+import { LABEL_WIDTH } from '../utils/index.js';
 import { formatSize } from '../../utils.js';
+import { sanitizeFilePath } from '../utils/ansi.js';
 
 // ─── Types ───────────────────────────────────────────────────────
 
@@ -70,9 +72,6 @@ export interface CompletionOptions {
 
 // ─── Constants ───────────────────────────────────────────────────
 
-/** Width of the label column in character cells. Fits "Classification" (longest label). */
-const LABEL_WIDTH = 20;
-
 /** Width of the health bar in character cells. */
 const BAR_WIDTH = 24;
 
@@ -85,26 +84,6 @@ const BAR_WIDTH = 24;
  * leaves room for 4 language lines (3 languages + 1 overflow).
  */
 const MAX_LANGUAGE_LINES = 3;
-
-/**
- * Render a label-value pair with 20-char label column.
- * Phase B: reused by stats screen.
- *
- * Contract:
- *   Input:  label ("Classification"), value ("CLI Tool"), suffix ("87%")
- *   Output: "Classification    CLI Tool                              87%"
- *
- * Label: padRight to 20 chars, bold (applied at caller level)
- * Value: fills remaining space
- * Suffix: padLeft to 6 chars, dim (applied at caller level)
- */
-function renderLabelValue(label: string, value: string, suffix?: string): string {
-  const paddedLabel = label.padEnd(LABEL_WIDTH);
-  if (suffix) {
-    return paddedLabel + value + suffix.padStart(6);
-  }
-  return paddedLabel + value;
-}
 
 // ─── Dashboard content builder ──────────────────────────────────
 
@@ -141,7 +120,7 @@ function buildNarrowLines(options: CompletionOptions): Line[] {
 
   // Project name header
   lines.push({
-    segments: [{ text: `repo-map · ${options.projectName}` }],
+    segments: [{ text: `repo-map · ${sanitizeFilePath(options.projectName)}` }],
   });
   lines.push({ segments: [{ text: '' }] });
 
@@ -353,10 +332,10 @@ export function renderCompletion(
   } else {
     // Normal/wide terminal — wrap in a box
     const border = renderer.theme.border('round');
-    const boxWidth = Math.min(contentWidth + 4, width.columns);
+    const boxWidth = Math.min(contentWidth + 2, width.columns);
 
     const boxLines = renderBox(styledStrings, {
-      title: `repo-map · ${options.projectName}`,
+      title: `repo-map · ${sanitizeFilePath(options.projectName)}`,
       width: boxWidth,
       padding: 1,
       border: border.tl ? border : undefined,

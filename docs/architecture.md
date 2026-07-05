@@ -9,8 +9,12 @@ repo-map is a CLI tool that scans a repository and generates architecture docume
 ```
 src/
 ├── index.ts              # CLI entrypoint and pipeline orchestrator
+├── bin.ts                # CLI binary entry (shebang, error handling)
 ├── cli.ts                # Command-line argument parsing (commander)
 ├── types.ts              # Core type definitions
+├── utils.ts              # Shared utility functions
+├── file-cache.ts         # LRU file content cache (200 MB max)
+├── batch.ts              # Bounded concurrency batch processor
 ├── scanner/              # Filesystem scanning subsystem
 │   ├── index.ts          # scanDirectory() orchestrator
 │   ├── file-walker.ts    # Recursive directory traversal
@@ -26,10 +30,48 @@ src/
 │       ├── language-detector.ts
 │       ├── framework-detector.ts
 │       └── tool-detector.ts
-└── formatters/           # Output formatters
-    ├── json.ts           # JSON serializer
-    ├── markdown.ts       # Markdown renderer
-    └── stats.ts          # Compact statistics output
+├── formatters/           # Output formatters
+│   ├── json.ts           # JSON serializer
+│   ├── markdown.ts       # Markdown renderer
+│   └── stats.ts          # Compact statistics output
+├── intelligence/         # Project intelligence engine
+│   ├── index.ts          # runIntelligence() orchestrator
+│   ├── project-classifier.ts
+│   ├── maturity-estimator.ts
+│   ├── health-scorer.ts
+│   ├── entry-point-detector.ts
+│   ├── directory-role-classifier.ts
+│   ├── build-pipeline-analyzer.ts
+│   ├── dependency-analyzer.ts
+│   ├── strengths-generator.ts
+│   ├── suggestions-generator.ts
+│   └── insights-generator.ts
+├── architecture/         # Deep architecture analysis
+│   ├── index.ts          # runArchitectureAnalysis() orchestrator
+│   ├── import-parser.ts
+│   ├── dependency-graph.ts
+│   ├── pattern-detector.ts
+│   ├── circular-deps.ts
+│   ├── smells.ts
+│   ├── import-analysis.ts
+│   ├── module-analysis.ts
+│   ├── coupling.ts
+│   ├── cohesion.ts
+│   ├── layer-violations.ts
+│   ├── complexity.ts
+│   ├── risk-report.ts
+│   ├── dep-tree.ts
+│   ├── arch-score.ts
+│   └── refactor-suggestions.ts
+└── ui/                   # Terminal UI system
+    ├── index.ts          # UISession orchestrator
+    ├── renderer.ts       # Frame renderer and ANSI conversion
+    ├── animation/        # Animation system
+    ├── layout/           # Terminal width detection
+    ├── primitives/       # Box, table, list, text, divider, group
+    ├── screens/          # Scanning, analyzing, completion, stats, suggest, error, help
+    ├── theme/            # Color, symbol, border themes and presets
+    └── utils/            # ANSI escape sequence utilities
 ```
 
 ## Data Flow
@@ -116,7 +158,7 @@ Detectors run in registration order. The first detector to report a technology n
 
 ## Testing
 
-- Unit tests for each detector
-- Integration tests for scanner and analyzer
+- Unit tests for each detector, animation, primitive, and screen
+- Integration tests for scanner, analyzer, and formatter pipeline
 - End-to-end tests for the full pipeline
-- 149 tests total, all passing
+- 783 tests total, all passing

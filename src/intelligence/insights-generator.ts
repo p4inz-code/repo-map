@@ -1,4 +1,5 @@
-import type { FileEntry, Technology, BuildPipeline, DirectoryRole, ArchitectureInsight } from '../types.js';
+import type { FileEntry, Technology } from '../types.js';
+import type { BuildPipeline, DirectoryRole, ArchitectureInsight } from './types.js';
 
 /**
  * Generates architecture insights based on repository structure.
@@ -8,7 +9,7 @@ export function generateInsights(
   files: FileEntry[],
   technologies: Technology[],
   pipeline: BuildPipeline,
-  directoryRoles: DirectoryRole[],
+  _directoryRoles: DirectoryRole[],
 ): ArchitectureInsight[] {
   const insights: ArchitectureInsight[] = [];
   const norm = (p: string) => p.replace(/\\/g, '/');

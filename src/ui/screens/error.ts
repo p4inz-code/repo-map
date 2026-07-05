@@ -32,6 +32,7 @@
 import { Renderer } from '../renderer.js';
 import { renderBox } from '../primitives/box.js';
 import { wrap } from '../primitives/text.js';
+import { sanitizeFilePath } from '../utils/ansi.js';
 
 // ─── Types ───────────────────────────────────────────────────────
 
@@ -69,7 +70,7 @@ export function renderError(options: ErrorOptions, renderer: Renderer): void {
   contentLines.push('');
 
   // ── Error message with cross symbol (focal point) ───────────────
-  contentLines.push(`${indent}${crossSymbol} ${options.message}`);
+  contentLines.push(`${indent}${crossSymbol} ${sanitizeFilePath(options.message)}`);
 
   // ── Blank between message and suggestion ─────────────────────────
   contentLines.push('');
@@ -132,7 +133,7 @@ export function renderError(options: ErrorOptions, renderer: Renderer): void {
     }
   } else {
     const border = theme.border('round');
-    const boxWidth = Math.min(contentWidth + 4, renderer.width.columns);
+    const boxWidth = Math.min(contentWidth + 2, renderer.width.columns);
 
     const boxLines = renderBox(styledStrings, {
       title: 'Error',

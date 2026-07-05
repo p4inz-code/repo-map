@@ -1,4 +1,4 @@
-import type { ArchScore, CouplingResult, CohesionResult } from '../types.js';
+import type { ArchScore, CouplingResult, CohesionResult } from './types.js';
 
 /**
  * Calculates an architectural quality score from multiple dimensions.

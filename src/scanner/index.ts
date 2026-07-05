@@ -6,6 +6,7 @@ import {
 } from './ignore.js';
 import { walkDirectory } from './file-walker.js';
 import type { FileEntry, ScanResult, ScanStats } from '../types.js';
+import type { WalkProgress } from './file-walker.js';
 
 export interface ScannerOptions {
   rootPath: string;
@@ -13,6 +14,11 @@ export interface ScannerOptions {
   maxDepth?: number;
   excludePatterns?: string[];
   includePatterns?: string[];
+  /**
+   * Optional progress callback forwarded to walkDirectory.
+   * Receives cumulative file and directory counts during traversal.
+   */
+  onProgress?: (progress: WalkProgress) => void;
 }
 
 /**
@@ -131,6 +137,7 @@ export async function scanDirectory(
     maxDepth,
     excludePatterns,
     includePatterns,
+    onProgress,
   } = options;
 
   // Build the composite traversal filter: gitignore → exclude
@@ -149,7 +156,7 @@ export async function scanDirectory(
     );
   };
 
-  let files = await walkDirectory(rootPath, { filter, maxDepth, rootPath });
+  let files = await walkDirectory(rootPath, { filter, maxDepth, rootPath, onProgress });
 
   // Apply include filter post-walk: only files matching the pattern are kept,
   // directory entries that no longer contain matching files are pruned.

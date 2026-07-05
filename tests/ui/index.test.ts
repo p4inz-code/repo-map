@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { createUISession, type UISessionOptions, type UISession } from '../../src/ui/index.js';
+import { createUISession } from '../../src/ui/index.js';
 import { clearThemeCache } from '../../src/ui/theme/index.js';
 import { setForcedWidth } from '../../src/ui/layout/width.js';
-import { createBaseAnalysis, createMockIntelligence, createMockArchitecture } from '../helpers.js';
+import { createBaseAnalysis, createMockIntelligence } from '../helpers.js';
 
 // =================================================================
 // createUISession

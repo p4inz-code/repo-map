@@ -121,7 +121,7 @@ describe('processBatch', () => {
     expect(results[999]).toBe(1998);
   });
 
-  it('processes items with batchSize of 0 (defaults to 50)', async () => {
+  it('processes items with batchSize of 0 (defaults to adaptive)', async () => {
     const input = [1, 2, 3];
 
     const results = await processBatch(
@@ -131,5 +131,17 @@ describe('processBatch', () => {
     );
 
     expect(results).toEqual([1, 2, 3]);
+  });
+
+  it('uses adaptive default when batchSize is undefined', async () => {
+    const input = [1, 2, 3, 4, 5];
+
+    const results = await processBatch(
+      input,
+      async (item: number) => item * 10,
+    );
+
+    // Should process all items with adaptive default
+    expect(results).toEqual([10, 20, 30, 40, 50]);
   });
 });

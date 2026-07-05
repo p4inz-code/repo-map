@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { Renderer, type Line, type Segment } from '../../../src/ui/renderer.js';
+import { Renderer } from '../../../src/ui/renderer.js';
 import { AnimationManager } from '../../../src/ui/animation/index.js';
 import {
   renderAnalyzePhase,
@@ -30,7 +30,7 @@ function makeMockTheme(): Theme {
       return `${prefix}${text}${MOCK_ANSI_RESET}`;
     },
     symbol: (token: SymbolToken) => token === 'check' ? '✓' : token,
-    border: (style: BorderStyle): BorderChars => ({
+    border: (_style: BorderStyle): BorderChars => ({
       tl: '╭', tr: '╮', bl: '╰', br: '╯', h: '─', v: '│',
     }),
     colors: { primary: '', success: MOCK_ANSI_GREEN, error: '', warning: '', info: '', dim: '', muted: '', text: '', bg: '', heading: '', code: '', link: '', border: '' },
@@ -78,8 +78,12 @@ describe('renderAnalyzePhase', () => {
   it('renders an initial spinner line to stderr with "Analyzing..."', () => {
     renderAnalyzePhase(renderer, manager);
 
-    expect(stderrSpy).toHaveBeenCalledTimes(1);
-    const output = stderrSpy.mock.calls[0][0] as string;
+    // Two writes: cursorHide() + initial spinner line
+    expect(stderrSpy).toHaveBeenCalledTimes(2);
+    // First call is cursorHide
+    expect(stderrSpy.mock.calls[0][0] as string).toBe('\x1b[?25l');
+    // Second call is the spinner line
+    const output = stderrSpy.mock.calls[1][0] as string;
     expect(output).toContain('Analyzing');
     expect(output).toMatch(/\n$/);
   });

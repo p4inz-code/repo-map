@@ -1,10 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { Renderer, type Line, type Segment } from '../../../src/ui/renderer.js';
+import { Renderer } from '../../../src/ui/renderer.js';
 import { AnimationManager } from '../../../src/ui/animation/index.js';
 import {
   renderScanPhase,
   completeScanPhase,
-  type ScanPhaseOptions,
 } from '../../../src/ui/screens/scanning.js';
 import type { Theme, TextStyle, ColorToken, SymbolToken, BorderStyle, BorderChars } from '../../../src/ui/theme/index.js';
 import type { WidthInfo } from '../../../src/ui/layout/width.js';
@@ -31,7 +30,7 @@ function makeMockTheme(): Theme {
       return `${prefix}${text}${MOCK_ANSI_RESET}`;
     },
     symbol: (token: SymbolToken) => token === 'check' ? '✓' : token,
-    border: (style: BorderStyle): BorderChars => ({
+    border: (_style: BorderStyle): BorderChars => ({
       tl: '╭', tr: '╮', bl: '╰', br: '╯', h: '─', v: '│',
     }),
     colors: { primary: '', success: MOCK_ANSI_GREEN, error: '', warning: '', info: '', dim: '', muted: '', text: '', bg: '', heading: '', code: '', link: '', border: '' },
@@ -79,10 +78,12 @@ describe('renderScanPhase', () => {
   it('renders an initial spinner line to stderr', () => {
     renderScanPhase(renderer, manager, { projectName: 'my-project' });
 
-    // The initial frame is rendered synchronously — one line with
-    // spinner char + "Scanning my-project..."
-    expect(stderrSpy).toHaveBeenCalledTimes(1);
-    const output = stderrSpy.mock.calls[0][0] as string;
+    // Two writes: cursorHide() + initial spinner line
+    expect(stderrSpy).toHaveBeenCalledTimes(2);
+    // First call is cursorHide
+    expect(stderrSpy.mock.calls[0][0] as string).toBe('\x1b[?25l');
+    // Second call is the spinner line
+    const output = stderrSpy.mock.calls[1][0] as string;
     expect(output).toContain('Scanning my-project');
     // Should end with a newline (it's a complete line write)
     expect(output).toMatch(/\n$/);
@@ -93,12 +94,12 @@ describe('renderScanPhase', () => {
     expect(manager.running).toBe(true);
   });
 
-  it('returns a promise that resolves when completeScanPhase is called', async () => {
-    const promise = renderScanPhase(renderer, manager, { projectName: 'p' });
+  it('returns a done promise that resolves when completeScanPhase is called', async () => {
+    const { done } = renderScanPhase(renderer, manager, { projectName: 'p' });
 
     completeScanPhase(renderer, manager, 42, 12, 'p');
 
-    const result = await promise;
+    const result = await done;
     expect(result).toEqual({ files: 42, dirs: 12 });
   });
 
@@ -120,6 +121,40 @@ describe('renderScanPhase', () => {
     expect(cursorUp).toBe('\x1b[1A');
     // Second write is the content line with newline
     expect(content).toContain('Scanning test');
+  });
+
+  // ── MEDIUM 3: Progress reporting ──
+
+  it('updateProgress updates the spinner text with file/dir counts', () => {
+    const { updateProgress } = renderScanPhase(renderer, manager, { projectName: 'my-project' });
+    stderrSpy.mockClear();
+
+    // Simulate progress update
+    updateProgress({ files: 42, dirs: 12 });
+
+    // Advance one animation tick so the spinner renders with updated text
+    vi.advanceTimersByTime(80);
+
+    const content = stderrSpy.mock.calls[1]?.[0] as string;
+    expect(content).toContain('42 files');
+    expect(content).toContain('12 directories');
+    expect(content).toContain('Scanning my-project');
+  });
+
+  it('updateProgress can be called multiple times for incremental updates', () => {
+    const { updateProgress } = renderScanPhase(renderer, manager, { projectName: 'test' });
+    stderrSpy.mockClear();
+
+    updateProgress({ files: 10, dirs: 2 });
+    updateProgress({ files: 50, dirs: 5 });
+    updateProgress({ files: 100, dirs: 8 });
+
+    vi.advanceTimersByTime(80);
+
+    const content = stderrSpy.mock.calls[1]?.[0] as string;
+    // Should show latest counts
+    expect(content).toContain('100 files');
+    expect(content).toContain('8 directories');
   });
 });
 
@@ -207,7 +242,7 @@ describe('full lifecycle', () => {
   });
 
   it('produces initial spinner, animation updates, then completion', () => {
-    const promise = renderScanPhase(renderer, manager, { projectName: 'demo' });
+    const { done } = renderScanPhase(renderer, manager, { projectName: 'demo' });
 
     // Clear initial render output
     stderrSpy.mockClear();
@@ -219,21 +254,21 @@ describe('full lifecycle', () => {
     completeScanPhase(renderer, manager, 100, 20, 'demo');
 
     // The promise should resolve
-    return expect(promise).resolves.toEqual({ files: 100, dirs: 20 });
+    return expect(done).resolves.toEqual({ files: 100, dirs: 20 });
   });
 
   it('can be started and completed twice in sequence', async () => {
     // First scan cycle
-    const p1 = renderScanPhase(renderer, manager, { projectName: 'first' });
+    const { done: d1 } = renderScanPhase(renderer, manager, { projectName: 'first' });
     completeScanPhase(renderer, manager, 10, 2, 'first');
-    const r1 = await p1;
+    const r1 = await d1;
     expect(r1).toEqual({ files: 10, dirs: 2 });
 
     // Second scan cycle — create fresh manager
     const manager2 = new AnimationManager({ interval: 80, enabled: true });
-    const p2 = renderScanPhase(renderer, manager, { projectName: 'second' });
-    completeScanPhase(renderer, manager, 20, 4, 'second');
-    const r2 = await p2;
+    const { done: d2 } = renderScanPhase(renderer, manager2, { projectName: 'second' });
+    completeScanPhase(renderer, manager2, 20, 4, 'second');
+    const r2 = await d2;
     expect(r2).toEqual({ files: 20, dirs: 4 });
   });
 });

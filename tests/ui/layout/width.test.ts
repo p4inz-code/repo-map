@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import {
   getTerminalWidth,
   setForcedWidth,
@@ -40,12 +40,12 @@ function withStdout(
     if (origColumns) {
       Object.defineProperty(process.stdout, 'columns', origColumns);
     } else {
-      delete (process.stdout as any).columns;
+      delete (process.stdout as { columns?: unknown }).columns;
     }
     if (origIsTTY) {
       Object.defineProperty(process.stdout, 'isTTY', origIsTTY);
     } else {
-      delete (process.stdout as any).isTTY;
+      delete (process.stdout as { isTTY?: unknown }).isTTY;
     }
   }
 }

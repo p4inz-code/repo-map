@@ -1,4 +1,5 @@
-import type { CohesionResult, FileEntry, DependencyGraph } from '../types.js';
+import type { FileEntry } from '../types.js';
+import type { CohesionResult, DependencyGraph } from './types.js';
 
 /**
  * Estimates cohesion of major folders based on how files within them relate.
@@ -8,8 +9,6 @@ export function analyzeCohesion(
   files: FileEntry[],
   graph: DependencyGraph,
 ): CohesionResult {
-  const norm = (p: string) => p.replace(/\\/g, '/');
-
   // Group files by their top-level directory
   const dirFiles = new Map<string, string[]>();
   for (const node of graph.nodes) {
@@ -20,6 +19,12 @@ export function analyzeCohesion(
       existing.push(node.path);
       dirFiles.set(dir, existing);
     }
+  }
+
+  // Build node lookup map for O(1) access (avoids O(n²) linear scans)
+  const nodeMap = new Map<string, (typeof graph.nodes)[number]>();
+  for (const node of graph.nodes) {
+    nodeMap.set(node.path, node);
   }
 
   const folderDetails: { path: string; cohesion: 'Low' | 'Medium' | 'High'; issues: string[] }[] = [];
@@ -33,7 +38,7 @@ export function analyzeCohesion(
 
     // Count imports within the same directory vs outside
     for (const filePath of filePaths) {
-      const node = graph.nodes.find((n) => n.path === filePath);
+      const node = nodeMap.get(filePath);
       if (!node) continue;
 
       for (const imp of node.imports) {
@@ -48,23 +53,18 @@ export function analyzeCohesion(
     const totalImports = intraDirImports + interDirImports;
 
     let cohesion: 'Low' | 'Medium' | 'High';
-    let score: number;
 
     if (totalImports === 0) {
       cohesion = 'Low';
-      score = 20;
       issues.push('Files in this directory have no internal dependencies on each other.');
     } else {
       const ratio = intraDirImports / totalImports;
       if (ratio > 0.6) {
         cohesion = 'High';
-        score = 85;
       } else if (ratio > 0.3) {
         cohesion = 'Medium';
-        score = 55;
       } else {
         cohesion = 'Low';
-        score = 25;
         issues.push('Files import more from outside this directory than from within.');
       }
     }
@@ -78,16 +78,11 @@ export function analyzeCohesion(
   }
 
   // Overall cohesion score
-  const scores = folderDetails.map((f) => {
-    switch (f.cohesion) {
-      case 'High': return 85;
-      case 'Medium': return 55;
-      default: return 25;
-    }
-  });
-
-  const avgScore = scores.length > 0
-    ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length)
+  const avgScore = folderDetails.length > 0
+    ? Math.round(folderDetails.reduce((sum, f) => {
+        const s = f.cohesion === 'High' ? 85 : f.cohesion === 'Medium' ? 55 : 25;
+        return sum + s;
+      }, 0) / folderDetails.length)
     : 0;
 
   let overall: 'Low' | 'Medium' | 'High';

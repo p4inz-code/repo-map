@@ -1,4 +1,5 @@
-import type { FileEntry, Technology, EntryPoint } from '../types.js';
+import type { FileEntry, Technology } from '../types.js';
+import type { EntryPoint } from './types.js';
 
 /**
  * Detects entry points in the repository.

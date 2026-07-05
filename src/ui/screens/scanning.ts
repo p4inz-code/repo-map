@@ -19,6 +19,7 @@
 import { Renderer } from '../renderer.js';
 import { AnimationManager } from '../animation/index.js';
 import { SpinnerAnimation } from '../animation/spinner.js';
+import { cursorHide, sanitizeFilePath } from '../utils/ansi.js';
 
 // ─── Types ───────────────────────────────────────────────────────
 
@@ -54,19 +55,26 @@ const _pending = new Map<
  * @param renderer - The renderer for ANSI conversion.
  * @param manager  - The animation manager (must not be running).
  * @param options  - Scan phase configuration.
- * @returns A Promise that resolves with file/directory counts when
- *          {@link completeScanPhase} is called.
+ * @returns An object with:
+ *   - `done`: A Promise that resolves with file/directory counts when
+ *     {@link completeScanPhase} is called.
+ *   - `updateProgress`: A function to update the spinner with current
+ *     file/directory counts during scanning.
  */
 export function renderScanPhase(
   renderer: Renderer,
   manager: AnimationManager,
   options: ScanPhaseOptions,
-): Promise<{ files: number; dirs: number }> {
-  const spinner = new SpinnerAnimation(`Scanning ${options.projectName}...`);
+): {
+  done: Promise<{ files: number; dirs: number }>;
+  updateProgress: (progress: { files: number; dirs: number }) => void;
+} {
+  const spinner = new SpinnerAnimation(`Scanning ${sanitizeFilePath(options.projectName)}...`);
   manager.register(spinner);
 
-  // Render the first frame directly (synchronously) so the user sees
-  // immediate feedback before the first animation tick arrives.
+  // Hide cursor and render the first frame directly (synchronously)
+  // so the user sees immediate feedback before the first animation tick.
+  process.stderr.write(cursorHide());
   const initialFrame = spinner.tick(80);
   const initialLines = renderer.renderFrame([
     { segments: [{ text: initialFrame!.lines[0] }] },
@@ -90,14 +98,25 @@ export function renderScanPhase(
     });
   });
 
-  // Return a Promise that will be fulfilled when completeScanPhase is called.
-  return new Promise((resolve) => {
+  // Create a progress update function that modifies the spinner text
+  // with current file/directory counts.
+  function updateProgress(progress: { files: number; dirs: number }): void {
+    spinner.update(
+      `Scanning ${sanitizeFilePath(options.projectName)} — ${progress.files.toLocaleString()} files, ${progress.dirs.toLocaleString()} directories`,
+    );
+  }
+
+  // Return a Promise that will be fulfilled when completeScanPhase is called,
+  // along with a progress update function.
+  const done = new Promise<{ files: number; dirs: number }>((resolve) => {
     _pending.set(manager, {
       resolve,
       spinner,
       projectName: options.projectName,
     });
   });
+
+  return { done, updateProgress };
 }
 
 /**
@@ -126,11 +145,12 @@ export function completeScanPhase(
   manager.stop();
 
   // Render the completion line with success styling.
+  const checkSymbol = renderer.theme.symbol('check');
   const completionLines = renderer.renderFrame([
     {
       segments: [
-        { text: '✓ ', style: { color: 'success' } },
-        { text: `Scanned ${projectName} — ${files} files, ${dirs} directories` },
+        { text: `${checkSymbol} `, style: { color: 'success' } },
+        { text: `Scanned ${sanitizeFilePath(projectName)} — ${files} files, ${dirs} directories` },
       ],
     },
   ]);

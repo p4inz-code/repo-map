@@ -1,4 +1,5 @@
 import type { FileEntry } from '../types.js';
+import { sanitizeFilePath } from '../ui/utils/ansi.js';
 
 interface TreeNode {
   name: string;
@@ -70,9 +71,10 @@ function renderNodes(
 
     if (useConnectors) {
       const connector = isLast ? '└── ' : '├── ';
-      result += prefix + connector + node.name + suffix + '\n';
+      const safeName = sanitizeFilePath(node.name);
+      result += prefix + connector + safeName + suffix + '\n';
     } else {
-      result += node.name + suffix + '\n';
+      result += sanitizeFilePath(node.name) + suffix + '\n';
     }
 
     if (node.children.length > 0) {

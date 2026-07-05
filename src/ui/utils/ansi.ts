@@ -146,6 +146,32 @@ export function stripAnsi(text: string): string {
 }
 
 /**
+ * Sanitize a file path or user-controlled string for safe terminal display.
+ *
+ * Strips all ANSI escape sequences that could inject color, cursor movement,
+ * hyperlinks, or other terminal control into displayed output.
+ *
+ * Idempotent — safe to call multiple times on the same string.
+ * Use at every rendering/output boundary where user-controlled filenames,
+ * paths, or project names are displayed.
+ *
+ * Does NOT modify internal stored paths — use ONLY at output boundaries.
+ *
+ * @param text - The text to sanitize (e.g. a file path, project name).
+ * @returns The text with all ANSI escape sequences removed.
+ *
+ * @example
+ * ```ts
+ * sanitizeFilePath('\x1b[31mHACKED\x1b[0m.txt')  // 'HACKED.txt'
+ * sanitizeFilePath('src/index.ts')                   // 'src/index.ts'
+ * sanitizeFilePath('中文文件名')                       // '中文文件名'
+ * ```
+ */
+export function sanitizeFilePath(text: string): string {
+  return stripAnsi(text);
+}
+
+/**
  * Calculate the visible width of a string (without ANSI escape codes).
  *
  * Each ASCII/ANSI character is 1 cell wide. CJK characters
@@ -167,20 +193,49 @@ export function visibleLength(text: string): number {
 
   for (const char of cleaned) {
     const code = char.codePointAt(0)!;
-    // CJK Unified Ideographs (U+4E00–U+9FFF)
-    // CJK Unified Ideographs Extension A (U+3400–U+4DBF)
-    // CJK Unified Ideographs Extension B (U+20000–U+2A6DF)
-    // CJK Compatibility Ideographs (U+F900–U+FAFF)
-    // Fullwidth forms (U+FF01–U+FF60, U+FFE0–U+FFE6)
-    // Hangul Syllables (U+AC00–U+D7AF)
+    // --- East Asian Wide characters (2 cells wide) ---
+    //
+    // Source: Unicode East Asian Width property (W / F)
+    //
+    // CJK Radicals Supplement:          U+2E80–U+2EFF
+    // Kangxi Radicals:                  U+2F00–U+2FDF
+    // Ideographic Description Chars:    U+2FF0–U+2FFF
+    // CJK Symbols & Punctuation:        U+3000–U+303F  (fullwidth space, etc.)
+    // CJK Unified Ideographs Ext A:     U+3400–U+4DBF
+    // CJK Unified Ideographs:           U+4E00–U+9FFF
+    // Hangul Jamo:                      U+1100–U+11FF
+    // Enclosed CJK Letters & Months:    U+3200–U+32FF
+    // CJK Compatibility:                U+3300–U+33FF
+    // Hangul Syllables:                 U+AC00–U+D7AF
+    // Hangul Jamo Extended-A:           U+A960–U+A97C
+    // Hangul Jamo Extended-B:           U+D7B0–U+D7FF
+    // CJK Compatibility Ideographs:     U+F900–U+FAFF
+    // Fullwidth Forms (ASCII vars):     U+FF01–U+FF60
+    // Fullwidth Forms (additional):     U+FFE0–U+FFE6
+    // CJK Unified Ideographs Ext B:     U+20000–U+2A6DF
+    // CJK Unified Ideographs Ext C:     U+2B820–U+2CEAF
+    // CJK Unified Ideographs Ext D:     U+2CEB0–U+2EBE0
+    // CJK Compatibility Supplement:     U+2F800–U+2FA1F
     if (
-      (code >= 0x4e00 && code <= 0x9fff) ||
-      (code >= 0x3400 && code <= 0x4dbf) ||
-      (code >= 0x20000 && code <= 0x2a6df) ||
-      (code >= 0xf900 && code <= 0xfaff) ||
-      (code >= 0xff01 && code <= 0xff60) ||
-      (code >= 0xffe0 && code <= 0xffe6) ||
-      (code >= 0xac00 && code <= 0xd7af)
+      (code >= 0x1100 && code <= 0x11ff) ||  // Hangul Jamo
+      (code >= 0x2e80 && code <= 0x2eff) ||  // CJK Radicals Supplement
+      (code >= 0x2f00 && code <= 0x2fdf) ||  // Kangxi Radicals
+      (code >= 0x2ff0 && code <= 0x2fff) ||  // Ideographic Description Characters
+      (code >= 0x3000 && code <= 0x303f) ||  // CJK Symbols and Punctuation (includes fullwidth space)
+      (code >= 0x3200 && code <= 0x32ff) ||  // Enclosed CJK Letters and Months
+      (code >= 0x3300 && code <= 0x33ff) ||  // CJK Compatibility
+      (code >= 0x3400 && code <= 0x4dbf) ||  // CJK Unified Ideographs Extension A
+      (code >= 0x4e00 && code <= 0x9fff) ||  // CJK Unified Ideographs
+      (code >= 0xa960 && code <= 0xa97c) ||  // Hangul Jamo Extended-A
+      (code >= 0xac00 && code <= 0xd7af) ||  // Hangul Syllables
+      (code >= 0xd7b0 && code <= 0xd7ff) ||  // Hangul Jamo Extended-B
+      (code >= 0xf900 && code <= 0xfaff) ||  // CJK Compatibility Ideographs
+      (code >= 0xff01 && code <= 0xff60) ||  // Fullwidth Forms (ASCII variants)
+      (code >= 0xffe0 && code <= 0xffe6) ||  // Fullwidth Forms (additional)
+      (code >= 0x20000 && code <= 0x2a6df) || // CJK Unified Ideographs Extension B
+      (code >= 0x2b820 && code <= 0x2ceaf) || // CJK Unified Ideographs Extension C
+      (code >= 0x2ceb0 && code <= 0x2ebe0) || // CJK Unified Ideographs Extension D
+      (code >= 0x2f800 && code <= 0x2fa1f)    // CJK Compatibility Ideographs Supplement
     ) {
       length += 2;
     } else {

@@ -83,4 +83,66 @@ describe('buildDependencyGraph', () => {
     // Even if 'src/app.ts' could match itself, no self-edge should be created
     expect(graph.edges).toHaveLength(0);
   });
+
+  // ── New resolution patterns (MEDIUM 2 fix) ──
+
+  it('resolves imports with .mjs extension', () => {
+    const imports: ImportParseResult[] = [
+      { path: 'src/app.ts', internalImports: ['src/utils/helper'], externalImports: [], absolutePath: '/repo/src/app.ts' },
+      { path: 'src/utils/helper.mjs', internalImports: [], externalImports: [], absolutePath: '/repo/src/utils/helper.mjs' },
+    ];
+    const graph = buildDependencyGraph(imports);
+    expect(graph.edges).toHaveLength(1);
+    expect(graph.edges[0].to).toBe('src/utils/helper.mjs');
+  });
+
+  it('resolves imports with .cjs extension', () => {
+    const imports: ImportParseResult[] = [
+      { path: 'src/app.ts', internalImports: ['src/utils/helper'], externalImports: [], absolutePath: '/repo/src/app.ts' },
+      { path: 'src/utils/helper.cjs', internalImports: [], externalImports: [], absolutePath: '/repo/src/utils/helper.cjs' },
+    ];
+    const graph = buildDependencyGraph(imports);
+    expect(graph.edges).toHaveLength(1);
+    expect(graph.edges[0].to).toBe('src/utils/helper.cjs');
+  });
+
+  it('resolves imports via index.tsx for directory paths', () => {
+    const imports: ImportParseResult[] = [
+      { path: 'src/app.ts', internalImports: ['src/components'], externalImports: [], absolutePath: '/repo/src/app.ts' },
+      { path: 'src/components/index.tsx', internalImports: [], externalImports: [], absolutePath: '/repo/src/components/index.tsx' },
+    ];
+    const graph = buildDependencyGraph(imports);
+    expect(graph.edges).toHaveLength(1);
+    expect(graph.edges[0].to).toBe('src/components/index.tsx');
+  });
+
+  it('resolves imports via index.mjs for directory paths', () => {
+    const imports: ImportParseResult[] = [
+      { path: 'src/app.mjs', internalImports: ['src/utils'], externalImports: [], absolutePath: '/repo/src/app.mjs' },
+      { path: 'src/utils/index.mjs', internalImports: [], externalImports: [], absolutePath: '/repo/src/utils/index.mjs' },
+    ];
+    const graph = buildDependencyGraph(imports);
+    expect(graph.edges).toHaveLength(1);
+    expect(graph.edges[0].to).toBe('src/utils/index.mjs');
+  });
+
+  it('resolves imports via index.cjs for directory paths', () => {
+    const imports: ImportParseResult[] = [
+      { path: 'src/app.cjs', internalImports: ['src/utils'], externalImports: [], absolutePath: '/repo/src/app.cjs' },
+      { path: 'src/utils/index.cjs', internalImports: [], externalImports: [], absolutePath: '/repo/src/utils/index.cjs' },
+    ];
+    const graph = buildDependencyGraph(imports);
+    expect(graph.edges).toHaveLength(1);
+    expect(graph.edges[0].to).toBe('src/utils/index.cjs');
+  });
+
+  it('resolves imports with .jsx extension', () => {
+    const imports: ImportParseResult[] = [
+      { path: 'src/app.ts', internalImports: ['src/components/Button'], externalImports: [], absolutePath: '/repo/src/app.ts' },
+      { path: 'src/components/Button.jsx', internalImports: [], externalImports: [], absolutePath: '/repo/src/components/Button.jsx' },
+    ];
+    const graph = buildDependencyGraph(imports);
+    expect(graph.edges).toHaveLength(1);
+    expect(graph.edges[0].to).toBe('src/components/Button.jsx');
+  });
 });

@@ -1,4 +1,4 @@
-import type { CouplingResult, DependencyGraph } from '../types.js';
+import type { CouplingResult, DependencyGraph } from './types.js';
 
 /**
  * Estimates module coupling based on the dependency graph.
@@ -19,8 +19,6 @@ export function analyzeCoupling(graph: DependencyGraph): CouplingResult {
   }
 
   // Count how many modules have dependencies
-  const modulesWithIncoming = nodes.filter((n) => n.importedBy.length > 0).length;
-  const modulesWithOutgoing = nodes.filter((n) => n.internalImports > 0).length;
   const coupledModules = nodes.filter((n) => n.importedBy.length > 0 || n.internalImports > 0).length;
 
   // Calculate coupling metrics

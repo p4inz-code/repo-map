@@ -1,11 +1,16 @@
 #!/usr/bin/env node
 
+import { cursorShow } from './ui/utils/ansi.js';
 import { run } from './index.js';
 import { createUISession } from './ui/index.js';
+import { isColorEnabled } from './utils.js';
 
 let interrupted = false;
 
 process.on('SIGINT', () => {
+  // Always restore cursor visibility before printing interrupt messages
+  process.stderr.write(cursorShow());
+
   if (interrupted) {
     process.stderr.write('\nForce exiting...\n');
     process.exit(130);
@@ -30,7 +35,8 @@ run(process.argv)
         : undefined;
 
     // Create a minimal UISession for error display
-    const ui = createUISession({ color: process.env.NO_COLOR !== '1' });
+    // Use centralized color decision (checks process.env.NO_COLOR and --no-color flag)
+    const ui = createUISession({ color: isColorEnabled(process.argv) });
 
     // Known application errors (from src/index.ts)
     if (

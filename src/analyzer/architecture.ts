@@ -1,6 +1,8 @@
-import type { Technology, ScanStats, Intelligence, ArchitectureAnalysis } from '../types.js';
+import type { Technology, ScanStats, Intelligence, FullIntelligence } from '../types.js';
+import type { ArchitectureAnalysis } from '../architecture/types.js';
 import path from 'node:path';
 import { formatSize } from '../utils.js';
+import { sanitizeFilePath } from '../ui/utils/ansi.js';
 
 interface ArchitectureInput {
   rootPath: string;
@@ -9,7 +11,7 @@ interface ArchitectureInput {
   totalSize: number;
   stats: ScanStats;
   technologies: Technology[];
-  intelligence: Intelligence;
+  intelligence: FullIntelligence;
   tree: string;
   generatedAt: string;
   cliVersion: string;
@@ -98,7 +100,7 @@ function appendHeader(
 ): void {
   lines.push('# Repository Audit Report');
   lines.push('');
-  lines.push(`**Project:** ${projectName}  `);
+  lines.push(`**Project:** ${sanitizeFilePath(projectName)}  `);
   lines.push(`**Generated:** ${generatedAt}  `);
   lines.push(`**Tool:** repo-map v${cliVersion}  `);
   lines.push('');
@@ -201,10 +203,10 @@ function appendStatistics(
   lines.push(`| Maximum depth | ${stats.maxDepth} |`);
   lines.push(`| Average files per directory | ${stats.avgFilesPerDirectory} |`);
   if (stats.largestDirectory) {
-    lines.push(`| Largest directory | \`${stats.largestDirectory}\` (${stats.largestDirectoryFiles} files) |`);
+    lines.push(`| Largest directory | \`${sanitizeFilePath(stats.largestDirectory)}\` (${stats.largestDirectoryFiles} files) |`);
   }
   if (stats.largestFile) {
-    lines.push(`| Largest file | \`${stats.largestFile}\` (${formatSize(stats.largestFileSize)}) |`);
+    lines.push(`| Largest file | \`${sanitizeFilePath(stats.largestFile)}\` (${formatSize(stats.largestFileSize)}) |`);
   }
   lines.push('');
 }
@@ -228,7 +230,7 @@ function appendEntryPoints(lines: string[], intelligence: Intelligence, s: Secti
   lines.push('| Type | Path | Description |');
   lines.push('|---|---|---|');
   for (const ep of entryPoints) {
-    lines.push(`| ${ep.type} | \`${ep.path}\` | ${ep.description} |`);
+    lines.push(`| ${ep.type} | \`${sanitizeFilePath(ep.path)}\` | ${ep.description} |`);
   }
   lines.push('');
 }
@@ -242,7 +244,7 @@ function appendDirectoryRoles(lines: string[], intelligence: Intelligence, s: Se
   lines.push('| Directory | Role | Description |');
   lines.push('|---|---|---|');
   for (const role of directoryRoles) {
-    lines.push(`| \`${role.path}/\` | ${role.role} | ${role.description} |`);
+    lines.push(`| \`${sanitizeFilePath(role.path)}/\` | ${role.role} | ${role.description} |`);
   }
   lines.push('');
 }
@@ -373,9 +375,9 @@ function appendDependencyGraphSection(lines: string[], arch: ArchitectureAnalysi
   lines.push('|---|---|');
   lines.push(`| Total modules | ${dependencyGraph.nodes.length} |`);
   lines.push(`| Internal dependencies | ${dependencyGraph.edges.length} |`);
-  lines.push(`| Central modules | ${dependencyGraph.centralModules.length > 0 ? dependencyGraph.centralModules.slice(0, 3).map((m) => '\`' + m.split('/').pop() + '\`').join(', ') : 'None'} |`);
-  lines.push(`| Leaf modules | ${dependencyGraph.leafModules.length > 0 ? dependencyGraph.leafModules.slice(0, 3).map((m) => '\`' + m.split('/').pop() + '\`').join(', ') : 'None'} |`);
-  lines.push(`| Hub modules | ${dependencyGraph.hubModules.length > 0 ? dependencyGraph.hubModules.slice(0, 3).map((m) => '\`' + m.split('/').pop() + '\`').join(', ') : 'None'} |`);
+  lines.push(`| Central modules | ${dependencyGraph.centralModules.length > 0 ? dependencyGraph.centralModules.slice(0, 3).map((m) => '`' + sanitizeFilePath(m.split('/').pop() || '') + '`').join(', ') : 'None'} |`);
+  lines.push(`| Leaf modules | ${dependencyGraph.leafModules.length > 0 ? dependencyGraph.leafModules.slice(0, 3).map((m) => '`' + sanitizeFilePath(m.split('/').pop() || '') + '`').join(', ') : 'None'} |`);
+  lines.push(`| Hub modules | ${dependencyGraph.hubModules.length > 0 ? dependencyGraph.hubModules.slice(0, 3).map((m) => '`' + sanitizeFilePath(m.split('/').pop() || '') + '`').join(', ') : 'None'} |`);
   lines.push(`| Isolated modules | ${dependencyGraph.isolatedModules.length} |`);
   lines.push('');
 }
@@ -393,8 +395,8 @@ function appendCircularDepsSection(lines: string[], arch: ArchitectureAnalysis, 
   lines.push(sectionHeader(s, 'Circular Dependencies'));
   lines.push('');
   for (const cycle of circularDependencies.slice(0, 3)) {
-    const path = cycle.cycle.map((m) => m.split('/').pop()).join(' → ');
-    lines.push(`- 🔄 **${path}** (${cycle.severity} severity, ${cycle.fileCount} files)`);
+    const cyclePath = cycle.cycle.map((m) => sanitizeFilePath(m.split('/').pop() || '')).join(' → ');
+    lines.push(`- 🔄 **${cyclePath}** (${cycle.severity} severity, ${cycle.fileCount} files)`);
     lines.push(`  - ${cycle.recommendation}`);
   }
   lines.push('');
@@ -422,7 +424,7 @@ function appendComplexitySection(lines: string[], arch: ArchitectureAnalysis, s:
   for (const cs of arch.complexityScores.slice(0, 8)) {
     const icon = cs.level === 'Simple' ? '🟢' : cs.level === 'Moderate' ? '🟡' : cs.level === 'Complex' ? '🔴' : '⛔';
     const factors = cs.factors.map((f) => `${f.name}: ${f.value}`).join(', ');
-    lines.push(`| ${icon} \`${cs.path.split('/').pop()}\` | ${cs.level} | ${cs.score} | ${factors} |`);
+    lines.push(`| ${icon} \`${sanitizeFilePath(cs.path.split('/').pop() || '')}\` | ${cs.level} | ${cs.score} | ${factors} |`);
   }
   lines.push('');
 }

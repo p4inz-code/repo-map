@@ -1,5 +1,4 @@
-import type { CircularDependency } from '../types.js';
-import type { DependencyGraph } from '../types.js';
+import type { CircularDependency, DependencyGraph } from './types.js';
 import type { ImportParseResult } from './import-parser.js';
 
 /**

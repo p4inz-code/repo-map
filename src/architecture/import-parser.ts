@@ -20,6 +20,7 @@ export interface ImportParseResult {
 const PARSEABLE_EXTENSIONS = new Set([
   '.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs', '.mts', '.cts',
   '.py', '.java', '.kt', '.go', '.rs', '.rb', '.php', '.cs',
+  '.c', '.cpp', '.h', '.hpp', '.cc', '.cxx', '.hh', '.hxx', '.ixx',
 ]);
 
 /**
@@ -123,6 +124,37 @@ function parseImports(content: string, filePath: string): { internal: string[]; 
       } else {
         external.push(moduleName);
       }
+    }
+  }
+
+  // C / C++: #include directives
+  if (['c', 'cpp', 'h', 'hpp', 'cc', 'cxx', 'hh', 'hxx', 'ixx'].includes(ext || '')) {
+    // #include "local/header.h" — local relative include (internal)
+    const localIncludeRegex = /#include\s+"([^"]+)"/g;
+    let match;
+    while ((match = localIncludeRegex.exec(content)) !== null) {
+      const includePath = match[1];
+      if (includePath.startsWith('./') || includePath.startsWith('../')) {
+        internal.push(includePath);
+      } else {
+        // Quotes without ./ prefix could be local (e.g., "foo.h")
+        // Treat as internal — the dependency graph resolver will
+        // skip it if it doesn't resolve to an actual file.
+        internal.push('./' + includePath);
+      }
+    }
+
+    // #include <system/header.h> — system include (external)
+    // Only resolve as internal if the include path maps to a file
+    // that exists within the project. The resolution happens later
+    // in the dependency graph builder.
+    const systemIncludeRegex = /#include\s+<([^>]+)>/g;
+    while ((match = systemIncludeRegex.exec(content)) !== null) {
+      const includePath = match[1];
+      // For system includes (<...>), we don't know if they resolve
+      // locally. The dependency graph builder will attempt resolution
+      // and only include edges for files that actually exist.
+      external.push(includePath);
     }
   }
 

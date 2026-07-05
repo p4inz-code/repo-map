@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { analyzeCohesion } from '../../src/architecture/cohesion.js';
-import type { FileEntry, DependencyGraph } from '../../src/types.js';
+import type { DependencyGraph } from '../../src/architecture/types.js';
 
 function makeGraph(nodes: { path: string; imports: string[] }[]): DependencyGraph {
   return {
@@ -45,5 +45,18 @@ describe('analyzeCohesion', () => {
     ]);
     const result = analyzeCohesion([], graph);
     expect(result.folderDetails.length).toBeGreaterThanOrEqual(0);
+  });
+
+  it('handles many nodes efficiently via nodeMap lookup', () => {
+    // Create enough nodes to exercise the Map-based lookup path
+    const nodes = Array.from({ length: 50 }, (_, i) => ({
+      path: `src/module${i}.ts`,
+      imports: i > 0 ? [`src/module${i - 1}.ts`] : [],
+    }));
+    const graph = makeGraph(nodes);
+    const result = analyzeCohesion([], graph);
+    // Should complete without error and produce a valid result
+    expect(result.score).toBeGreaterThanOrEqual(0);
+    expect(result.folderDetails.some((f) => f.path === 'src')).toBe(true);
   });
 });
