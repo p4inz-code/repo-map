@@ -13,7 +13,7 @@ import type {
 } from './intelligence/types.js';
 
 export const CURRENT_SCHEMA_VERSION = '1.0.0';
-export const CLI_VERSION = '2.2.3';
+export const CLI_VERSION = '2.2.4';
 
 // ─── Shared Data Types ───────────────────────────────────────────
 

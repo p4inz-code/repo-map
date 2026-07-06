@@ -105,7 +105,7 @@ repo-map . --interactive
 Launches a navigable terminal UI after analysis completes. Explore your repository structure, inspect files, and browse analysis results using keyboard navigation.
 
 ```text
-repo-map — Interactive Workspace                   v2.2.3
+repo-map — Interactive Workspace                   v2.2.4
 ────────────────────────────────────────────────────────────
 │ Overview        │ ▸ Help                            │  Details  │
 │ Statistics      │                                   │  ──────── │
@@ -205,7 +205,7 @@ Press `Ctrl+P` to open the command palette for quick actions: navigate to views,
 ```json
 {
   "schemaVersion": "1.0.0",
-  "cliVersion": "2.2.3",
+  "cliVersion": "2.2.4",
   "projectName": "my-project",
   "stats": {
     "totalFiles": 42,
