@@ -69,6 +69,7 @@ import { InfoPanel } from './info-panel.js';
 import { RepositoryTree } from './repository-tree.js';
 import { CommandPalette } from './command-palette.js';
 import type { WorkspaceView, WorkspaceRegion, BreadcrumbSegment, InfoPanelData, TreeNodeData, RegionSelectionState, RegionScrollState, PanelCollapseState } from '../state/types.js';
+import { CLI_VERSION } from '../../types.js';
 import type { Analysis } from '../../types.js';
 
 // ─── Types ─────────────────────────────────────────────────────
@@ -330,7 +331,7 @@ export class WorkspaceLayout extends Component {
 
     // ── Header (1 line) ────────────────────────────────────
     const headerText = 'repo-map — Interactive Workspace';
-    const versionText = 'v2.2.0';
+    const versionText = `v${CLI_VERSION}`;
     const headerPad = Math.max(1, tw - headerText.length - versionText.length);
     lines.push({
       segments: [

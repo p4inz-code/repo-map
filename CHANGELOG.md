@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.2.2] - 2026-07-06
+
+### Added
+
+- **Interactive workspace** — New `--interactive` flag launches a navigable TUI with sidebar navigation, repository tree explorer, info panel, breadcrumbs, and keyboard shortcuts
+- **Tree output** — New `--tree` flag displays the directory tree on its own
+
+### Fixed
+
+- CLI version now correctly reports `2.2.2` matching package.json (was hardcoded to `2.2.0`)
+
+### Documentation
+
+- README updated with interactive workspace documentation, keyboard shortcuts, and region descriptions
+- Commander help updated with all options and examples including `--interactive`, `--tree`, and `--tree`
+
+The interactive workspace was built across multiple past releases but not wired into the CLI. This release completes the integration.
+
 ## [2.2.0] - 2026-07-04
 
 ### Added

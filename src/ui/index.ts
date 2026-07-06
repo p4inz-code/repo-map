@@ -50,6 +50,7 @@ import { cursorShow } from './utils/ansi.js';
 import { formatSize } from '../utils.js';
 import { CLI_VERSION } from '../types.js';
 import type { Analysis } from '../types.js';
+import type { TreeNodeData } from './state/types.js';
 
 // ─── Types ───────────────────────────────────────────────────────
 
@@ -76,6 +77,11 @@ export interface UISession {
   renderStats(analysis: Analysis, elapsed: number): void;
   renderSuggest(analysis: Analysis): void;
   renderHelp(): void;
+
+  // Interactive workspace
+  runInteractiveWorkspace(): Promise<void> | undefined;
+  setAnalysisData(analysis: Analysis): void;
+  setTreeData(data: TreeNodeData): void;
 
   // Error
   reportError(message: string, suggestion?: string): void;
@@ -251,6 +257,22 @@ class UISessionImpl implements UISession {
   runInteractiveWorkspace(): Promise<void> | undefined {
     if (!this._app) return undefined;
     return this._app.runWorkspace();
+  }
+
+  /**
+   * Set the analysis data on the interactive workspace.
+   * This enables the info panel to display real analysis results.
+   */
+  setAnalysisData(analysis: Analysis): void {
+    this._app?.setAnalysisData(analysis);
+  }
+
+  /**
+   * Set the tree data on the interactive workspace.
+   * This populates the repository tree explorer.
+   */
+  setTreeData(data: TreeNodeData): void {
+    this._app?.setTreeData(data);
   }
 
   // ── App accessor ───────────────────────────────────────────────

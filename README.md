@@ -66,6 +66,8 @@ Four elements, one scan: **Classification** (what is it?), **Health** (0–100 s
 | `repo-map /path/to/project` | Scan a specific path |
 | `repo-map --stats` | Compact statistics view |
 | `repo-map --suggest` | Improvement suggestions |
+| `repo-map --interactive` | Launch interactive workspace |
+| `repo-map --tree` | Show directory tree only |
 | `repo-map --json` | JSON output (stable schema) |
 | `repo-map -o report.md` | Write report to file |
 | `repo-map --depth <n>` | Maximum directory depth |
@@ -80,6 +82,8 @@ Run `repo-map --help` for full documentation.
 
 ## What's New in v2.2
 
+- **Interactive workspace** — `--interactive` launches a navigable TUI with sidebar, repository tree, info panel, and keyboard shortcuts
+- **Tree output** — `--tree` displays the directory tree on its own
 - **Dashboard redesign** — Classification-first layout with health bar and 20-character label alignment
 - **Suggestions screen** — `--suggest` command with prioritized recommendations (high/medium/low)
 - **Health scoring** — 8-dimension assessment (documentation, testing, consistency, tooling) with composite 0–100 score
@@ -88,7 +92,70 @@ Run `repo-map --help` for full documentation.
 - **Narrow terminal support** — Graceful degradation below 60 columns (text-only layout)
 - **Color tokens** — 4 semantic colors across 16-color, 256-color, and TrueColor modes
 - **Theme presets** — Default, monochrome, high-contrast, and minimal
-- **783+ automated tests** — Coverage across all screens, animations, themes, and edge cases
+- **862+ automated tests** — Coverage across all screens, animations, themes, and edge cases
+
+---
+
+## Interactive Workspace
+
+```bash
+repo-map . --interactive
+```
+
+Launches a navigable terminal UI after analysis completes. Explore your repository structure, inspect files, and browse analysis results using keyboard navigation.
+
+```text
+repo-map — Interactive Workspace                   v2.2.2
+────────────────────────────────────────────────────────────
+│ Overview        │ ▸ Help                            │  Details  │
+│ Statistics      │                                   │  ──────── │
+│ Suggestions     │   Keyboard Shortcuts              │           │
+│ Repository Tree │                                   │  No repo  │
+│ Help            │   General                         │  loaded   │
+│                 │   Tab/Shift+Tab  Cycle focus      │           │
+│                 │   ↑↓            Navigate items     │           │
+│                 │   Enter          Select / toggle   │           │
+│                 │   Space          Toggle collapse   │           │
+│                 │   q              Quit workspace    │           │
+│                 │                                   │           │
+│                 │   Tree View                       │           │
+│                 │   ←/→            Collapse/Expand   │           │
+│                 │   Home/End        First/Last item  │           │
+│                 │                                    │           │
+├─────────────────┴────────────────────────────────────┴───────────┤
+│ Overview · sidebar · 42f 12d 3l                                  │
+├──────────────────────────────────────────────────────────────────┤
+│ ↑↓ Navigate · Enter Select · Tab Focus · q Quit                 │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+### Keyboard Shortcuts
+
+| Key | Action |
+|-----|--------|
+| `↑↓` | Navigate items within focused region |
+| `←→` | Collapse/expand tree node (tree view) |
+| `Enter` | Select / toggle item |
+| `Tab` / `Shift+Tab` | Cycle focus between regions |
+| `Space` | Toggle panel collapse |
+| `Home` / `End` | Jump to first/last item |
+| `PgUp` / `PgDn` | Scroll one page |
+| `q` | Quit workspace |
+| `Ctrl+P` | Open command palette |
+| `/` | Filter tree (tree view focused) |
+| `?` | Open help view |
+
+### Regions
+
+The workspace is divided into four focusable regions:
+- **Sidebar** — View selection (Overview, Statistics, Suggestions, Repository Tree, Help)
+- **Tree** — Interactive file explorer with expand/collapse
+- **Info Panel** — Contextual details about selected items
+- **Footer** — Keyboard shortcut hints
+
+### Command Palette
+
+Press `Ctrl+P` to open the command palette for quick actions: navigate to views, focus regions, expand/collapse all, or quit.
 
 ---
 
@@ -138,7 +205,7 @@ Run `repo-map --help` for full documentation.
 ```json
 {
   "schemaVersion": "1.0.0",
-  "cliVersion": "2.2.0",
+  "cliVersion": "2.2.2",
   "projectName": "my-project",
   "stats": {
     "totalFiles": 42,
@@ -274,7 +341,7 @@ npm test
 ```
 
 Standards:
-- **783+ automated tests** — all must pass before merge
+- **862+ automated tests** — all must pass before merge
 - **Strict TypeScript** — no `any`, full type safety
 - **ESM-first** — native ES modules with `.js` extensions
 - **Product Identity spec** — [docs/design/PRODUCT_IDENTITY_V2.2.md](docs/design/PRODUCT_IDENTITY_V2.2.md) governs all UI changes
@@ -294,6 +361,14 @@ Run `npx tsx scripts/analyze-self.ts` to scan repo-map with itself.
 **Is the JSON output stable?** Yes. Versioned schema (`1.0.0`). Fields may be added but never removed without a major version.
 
 **How does this compare to `tree` or `cloc`?** `tree` shows structure. `cloc` counts lines. repo-map shows structure, tech stack, health scores, architecture analysis, and improvement suggestions — all in one command.
+
+---
+
+## Screenshots
+
+> Screenshots and animated GIFs of the interactive workspace and CLI output will be added here once visual assets are available.
+
+In the meantime, run `repo-map .` to see the dashboard, `repo-map . --stats` for statistics, and `repo-map . --interactive` for the interactive workspace.
 
 ---
 

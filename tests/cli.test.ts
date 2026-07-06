@@ -132,4 +132,60 @@ describe('parseCliArgs', () => {
       expect(result.exclude).toEqual(['dist']);
     });
   });
+
+  describe('--interactive', () => {
+    it('parses --interactive flag', () => {
+      const result = parseCliArgs([...baseArgs, '--interactive']);
+      expect(result.interactive).toBe(true);
+    });
+
+    it('is undefined when no --interactive specified', () => {
+      const result = parseCliArgs(baseArgs);
+      expect(result.interactive).toBeUndefined();
+    });
+
+    it('parses --interactive with path', () => {
+      const result = parseCliArgs([...baseArgs, '--interactive', '/project']);
+      expect(result.interactive).toBe(true);
+      expect(result.path).toBe('/project');
+    });
+
+    it('works alongside other flags', () => {
+      const result = parseCliArgs([
+        ...baseArgs,
+        '--interactive',
+        '--depth',
+        '3',
+        '--exclude',
+        'node_modules',
+      ]);
+      expect(result.interactive).toBe(true);
+      expect(result.depth).toBe(3);
+      expect(result.exclude).toEqual(['node_modules']);
+    });
+  });
+
+  describe('--tree', () => {
+    it('parses --tree flag', () => {
+      const result = parseCliArgs([...baseArgs, '--tree']);
+      expect(result.tree).toBe(true);
+    });
+
+    it('is undefined when no --tree specified', () => {
+      const result = parseCliArgs(baseArgs);
+      expect(result.tree).toBeUndefined();
+    });
+
+    it('parses --tree with path', () => {
+      const result = parseCliArgs([...baseArgs, '--tree', '/project']);
+      expect(result.tree).toBe(true);
+      expect(result.path).toBe('/project');
+    });
+
+    it('parses --tree --json together', () => {
+      const result = parseCliArgs([...baseArgs, '--tree', '--json']);
+      expect(result.tree).toBe(true);
+      expect(result.format).toBe('json');
+    });
+  });
 });

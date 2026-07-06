@@ -44,15 +44,19 @@ export function parseCliArgs(argv: string[]): CliOptions {
     )
     .option('--stats', 'Show quick repository statistics')
     .option('--suggest', 'Show improvement suggestions')
+    .option('--interactive', 'Launch interactive workspace after analysis')
+    .option('--tree', 'Output directory tree only')
     .option('--no-color', 'Disable ANSI color output')
     .addHelpText('after', `
 Examples:
-  $ repo-map .                    Scan the current directory
-  $ repo-map /path/to/project     Scan a specific project
-  $ repo-map --json -o report.json  Export as JSON
-  $ repo-map --stats --exclude dist  Quick stats, excluding dist
-  $ repo-map --suggest             Show improvement suggestions
-  $ repo-map --depth 2 --no-color  Limited depth, no colors
+  $ repo-map .                              Scan the current directory
+  $ repo-map /path/to/project               Scan a specific project
+  $ repo-map --json -o report.json           Export as JSON
+  $ repo-map --stats --exclude dist          Quick stats, excluding dist
+  $ repo-map --suggest                       Show improvement suggestions
+  $ repo-map --tree                          Show directory tree
+  $ repo-map --interactive .                 Launch interactive workspace
+  $ repo-map --depth 2 --no-color            Limited depth, no colors
 `)
     .parse(argv);
 
@@ -69,6 +73,8 @@ Examples:
     include: opts.include?.length ? opts.include : undefined,
     stats: opts.stats ?? undefined,
     suggest: opts.suggest ?? undefined,
+    interactive: opts.interactive ?? undefined,
+    tree: opts.tree ?? undefined,
     color: opts.color !== false,
   };
 }

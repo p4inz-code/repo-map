@@ -13,7 +13,7 @@ import type {
 } from './intelligence/types.js';
 
 export const CURRENT_SCHEMA_VERSION = '1.0.0';
-export const CLI_VERSION = '2.2.0';
+export const CLI_VERSION = '2.2.2';
 
 // ─── Shared Data Types ───────────────────────────────────────────
 
@@ -63,6 +63,8 @@ export interface CliOptions {
   include?: string[];
   stats?: boolean;
   suggest?: boolean;
+  interactive?: boolean;
+  tree?: boolean;
   /** Whether ANSI color output is enabled. Defaults to true. */
   color: boolean;
 }

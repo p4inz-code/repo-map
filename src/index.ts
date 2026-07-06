@@ -8,6 +8,7 @@ import { formatMarkdown } from './formatters/markdown.js';
 import { formatStats, formatStatsJson } from './formatters/stats.js';
 import { fileCache } from './file-cache.js';
 import { createUISession } from './ui/index.js';
+import { buildTreeNodeData } from './analyzer/tree.js';
 
 /**
  * Main pipeline: scan → analyze → format → output.
@@ -88,6 +89,17 @@ export async function run(argv: string[]): Promise<string> {
         : formatStats(analysis);
     }
 
+    // ── Interactive workspace mode ──────────────────────────
+    if (options.interactive) {
+      const rootNode = buildTreeNodeData(scanResult.files);
+      if (rootNode) {
+        ui.setTreeData(rootNode);
+      }
+      ui.setAnalysisData(analysis);
+      await ui.runInteractiveWorkspace();
+      return '';
+    }
+
     if (options.suggest) {
       // Render suggestions screen on stderr
       ui.renderSuggest(analysis);
@@ -96,6 +108,11 @@ export async function run(argv: string[]): Promise<string> {
       return options.format === 'json'
         ? formatJson(analysis)
         : formatMarkdown(analysis);
+    }
+
+    // ── Tree-only output mode ────────────────────────────────
+    if (options.tree) {
+      return analysis.tree;
     }
 
     // Full completion — render summary box on stderr

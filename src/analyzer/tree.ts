@@ -1,4 +1,5 @@
 import type { FileEntry } from '../types.js';
+import type { TreeNodeData } from '../ui/state/types.js';
 import { sanitizeFilePath } from '../ui/utils/ansi.js';
 
 interface TreeNode {
@@ -86,6 +87,108 @@ function renderNodes(
   }
 
   return result;
+}
+
+/**
+ * Build a TreeNodeData tree from a flat list of FileEntry items.
+ *
+ * This produces the interactive tree data structure used by the
+ * workspace RepositoryTree component. Directories are opened by
+ * default (expanded: true) for a complete initial view.
+ */
+export function buildTreeNodeData(files: FileEntry[]): TreeNodeData | null {
+  if (files.length === 0) return null;
+
+  // Sort: directories first, then alphabetical
+  const sorted = [...files].sort((a, b) => {
+    if (a.isDirectory !== b.isDirectory) return a.isDirectory ? -1 : 1;
+    return a.relativePath.localeCompare(b.relativePath);
+  });
+
+  // Build a nested map structure from relative paths
+  interface NodeMap {
+    [name: string]: {
+      entry?: FileEntry;
+      children: NodeMap;
+    };
+  }
+
+  const root: NodeMap = {};
+
+  for (const entry of sorted) {
+    const normalized = entry.relativePath.replace(/\\/g, '/');
+    const parts = normalized.split('/').filter(Boolean);
+    let current = root;
+
+    for (let i = 0; i < parts.length; i++) {
+      const part = parts[i];
+      if (!current[part]) {
+        current[part] = { children: {} };
+      }
+      if (i === parts.length - 1) {
+        current[part].entry = entry;
+      }
+      current = current[part].children;
+    }
+  }
+
+  // Recursively convert to TreeNodeData
+  function convert(name: string, node: NodeMap[string], depth: number): TreeNodeData {
+    const entry = node.entry;
+    const isDir = entry ? entry.isDirectory : Object.keys(node.children).length > 0;
+    const children = Object.keys(node.children);
+
+    // Determine language from file extension
+    let language: string | undefined;
+    if (!isDir && name.includes('.')) {
+      const ext = name.split('.').pop()?.toLowerCase();
+      if (ext) {
+        const langMap: Record<string, string> = {
+          ts: 'TypeScript', tsx: 'TypeScript', js: 'JavaScript', jsx: 'JavaScript',
+          py: 'Python', rs: 'Rust', go: 'Go', java: 'Java', rb: 'Ruby',
+          cs: 'C#', cpp: 'C++', c: 'C', swift: 'Swift', kt: 'Kotlin',
+          html: 'HTML', css: 'CSS', scss: 'SCSS', less: 'Less',
+          json: 'JSON', yml: 'YAML', yaml: 'YAML', md: 'Markdown',
+          sql: 'SQL', sh: 'Shell', bash: 'Shell',
+        };
+        language = langMap[ext];
+      }
+    }
+
+    // Build child nodes
+    const childNodes = children.map((childName) =>
+      convert(childName, node.children[childName], depth + 1),
+    );
+
+    return {
+      name,
+      path: entry?.relativePath || name,
+      type: isDir ? 'directory' : 'file',
+      size: entry?.size,
+      language,
+      expanded: isDir && depth < 2 ? true : undefined,
+      depth,
+      children: childNodes.length > 0 ? childNodes : undefined,
+    };
+  }
+
+  // Get the top-level entries
+  const names = Object.keys(root);
+  if (names.length === 1) {
+    // Single root — use it directly
+    return convert(names[0], root[names[0]], 0);
+  }
+
+  // Multiple roots — create a virtual root
+  const children = names.map((name) => convert(name, root[name], 1));
+  return {
+    name: '/',
+    path: '/',
+    type: 'directory',
+    expanded: true,
+    depth: 0,
+    children,
+  };
 }
 
 /**
