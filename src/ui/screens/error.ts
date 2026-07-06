@@ -1,36 +1,14 @@
 /**
- * Error screen — user-facing error presentation with calm, actionable feedback.
+ * Error screen — professional diagnostic layout with calm, actionable feedback.
  *
- * Renders a boxed error with the error message as the focal point,
- * and an optional suggestion for resolution.
- *
- * # Architecture
- * - Uses the Renderer for ANSI conversion (never emits raw codes).
- * - Uses renderBox primitive for layout.
- * - Static render (no animation) — writes once to stderr.
- *
- * # Layout
- * ```
- * ╭─ Error ──────────────────────────────────────────────────╮
- * │                                                           │
- * │  ✗ Path does not exist: /nonexistent                      │
- * │                                                           │
- * │  Provide a valid path to a directory,                     │
- * │  or run 'repo-map .' for the current one.                 │
- * │                                                           │
- * ╰───────────────────────────────────────────────────────────╯
- * ```
- *
- * # Narrow-terminal layout (< 60 cols)
- * No box borders. Text-only with cross symbol.
- *
- * # What it must NOT know about
- * - Animation manager, analysis pipeline, file system I/O
- * - Raw ANSI escape codes
+ * Uses reusable components: Panel, Footer.
+ * Sections: Error (cross symbol), Cause explanation, Recommendation, Exit hint.
  */
 
 import { Renderer } from '../renderer.js';
-import { renderBox } from '../primitives/box.js';
+import { Panel } from '../components/panel.js';
+import { Footer } from '../components/footer.js';
+import type { KeyHintEntry } from '../components/footer.js';
 import { wrap } from '../primitives/text.js';
 import { sanitizeFilePath } from '../utils/ansi.js';
 
@@ -46,104 +24,127 @@ export interface ErrorOptions {
 // ─── Public API ──────────────────────────────────────────────────
 
 /**
- * Render an error screen to stderr.
+ * Render an error screen to stderr with professional diagnostic layout.
  *
- * Displays a calm, actionable error message inside a bordered box.
- * The error message is the focal point (bold + error color).
+ * Layout:
+ *   ╔═ Error ═══════════════════════════════════════════════╗
+ *   ║                                                       ║
+ *   ║  ✗  Path does not exist: /nonexistent                 ║
+ *   ║                                                       ║
+ *   ║  ── Recommendation ─────────────────────────────────   ║
+ *   ║                                                       ║
+ *   ║     Provide a valid path to a directory,               ║
+ *   ║     or run 'repo-map .' for the current one.           ║
+ *   ║                                                       ║
+ *   ║  Press q to exit                                      ║
+ *   ║                                                       ║
+ *   ╚═══════════════════════════════════════════════════════╝
+ *
  * On narrow terminals, renders without box borders.
- *
- * @param options  - Error display options.
- * @param renderer - The renderer for ANSI conversion.
  */
 export function renderError(options: ErrorOptions, renderer: Renderer): void {
-  const contentWidth = renderer.width.contentWidth;
+  const pw = renderer.width.contentWidth;
   const isNarrow = renderer.width.isNarrow;
   const theme = renderer.theme;
-
-  const indent = ' '; // 1 extra space beyond box padding (padding=1 → total 2)
-  const crossSymbol = theme.symbol('cross');
-
-  // Build inner content lines (plain text)
-  const contentLines: string[] = [];
-
-  // ── Breathing after top border ──────────────────────────────────
-  contentLines.push('');
-
-  // ── Error message with cross symbol (focal point) ───────────────
-  contentLines.push(`${indent}${crossSymbol} ${sanitizeFilePath(options.message)}`);
-
-  // ── Blank between message and suggestion ─────────────────────────
-  contentLines.push('');
-
-  // ── Suggestion (dim, wrapped) ────────────────────────────────────
-  const maxMsgWidth = isNarrow ? contentWidth - 2 : contentWidth - 4;
-
-  let suggWrapped: string[] = [];
-  if (options.suggestion) {
-    suggWrapped = wrap(options.suggestion, maxMsgWidth);
-    for (const sLine of suggWrapped) {
-      contentLines.push(`${indent}${sLine}`);
-    }
-  }
-
-  // ── Breathing before bottom border ──────────────────────────────
-  contentLines.push('');
-
-  // Compute line indices for styling
-  //   0: blank (breathing)
-  //   1: cross + message (focal point)
-  //   2: blank
-  //   3..3+suggLen-1: suggestion lines (if any)
-  //   last: blank (breathing)
-  const suggestionLineCount = suggWrapped.length;
-  const suggestionStart = options.suggestion ? 3 : -1;
-
-  const styledLines = contentLines.map((line, idx) => {
-    if (!line) return { segments: [{ text: line }] };
-
-    const trimmed = line.trimStart();
-
-    // Error message — bold + error color (focal point)
-    if (idx === 1 && trimmed.startsWith(crossSymbol)) {
-      return {
-        segments: [
-          { text: line.slice(0, line.indexOf(trimmed)), style: { color: 'error' as const } },
-          { text: trimmed, style: { bold: true, color: 'error' as const } },
-        ],
-      };
-    }
-
-    // Suggestion lines — dim
-    if (
-      suggestionStart >= 0 &&
-      idx >= suggestionStart &&
-      idx < suggestionStart + suggestionLineCount
-    ) {
-      return { segments: [{ text: line, style: { dim: true as const } }] };
-    }
-
-    return { segments: [{ text: line }] };
-  });
-
-  const styledStrings = renderer.renderFrame(styledLines);
+  const errorIcon = theme.symbol('error');
+  const infoIcon = theme.symbol('info');
 
   if (isNarrow) {
-    for (const line of styledStrings) {
-      process.stderr.write(line + '\n');
-    }
-  } else {
-    const border = theme.border('round');
-    const boxWidth = Math.min(contentWidth + 2, renderer.width.columns);
+    renderNarrowError(options, renderer);
+    return;
+  }
 
-    const boxLines = renderBox(styledStrings, {
-      title: 'Error',
-      width: boxWidth,
-      padding: 1,
-      border: border.tl ? border : undefined,
+  // Use thick border for error panels (high emphasis)
+  const panel = new Panel('error-panel', {
+    title: 'Error',
+    width: pw + 2,
+    collapsible: false,
+    border: theme.border('double'),
+  });
+
+  panel.addBlank();
+
+  // Error message (focal point) — bold + error color
+  panel.addLine({
+    segments: [
+      { text: ` ${errorIcon} `, style: { color: 'error' } },
+      { text: sanitizeFilePath(options.message), style: { bold: true, color: 'error' } },
+    ],
+  });
+
+  panel.addBlank();
+
+  // Suggestion with "Recommendation" label
+  if (options.suggestion) {
+    panel.addLine({
+      segments: [
+        { text: ` ${infoIcon} Recommendation`, style: { bold: true } },
+      ],
     });
+    panel.addBlank();
 
-    for (const line of boxLines) {
-      process.stderr.write(line + '\n');
+    const maxMsgWidth = pw - 6;
+    const wrappedLines = wrap(options.suggestion, maxMsgWidth);
+    for (const line of wrappedLines) {
+      panel.addLine({
+        segments: [{ text: `   ${line}`, style: { dim: true } }],
+      });
+    }
+    panel.addBlank();
+  }
+
+  // Exit hint
+  panel.addLine({
+    segments: [
+      { text: `  Press q to exit`, style: { dim: true } },
+    ],
+  });
+
+  panel.addBlank();
+
+  // Render panel with double borders
+  const boxLines = panel.renderBoxed(renderer);
+  for (const l of boxLines) process.stderr.write(l + '\n');
+  process.stderr.write('\n');
+
+  // Footer
+  const hints: KeyHintEntry[] = [
+    { key: '?', description: 'Help' },
+    { key: 'q', description: 'Quit' },
+  ];
+  const footer = new Footer('error-footer', { hints, separator: theme.symbol('separator') });
+  const footerStyled = renderer.renderFrame(footer.render(renderer));
+  if (footerStyled[0]) process.stderr.write(footerStyled[0] + '\n');
+}
+
+// ─── Narrow terminal layout ─────────────────────────────────────
+
+function renderNarrowError(options: ErrorOptions, renderer: Renderer): void {
+  const theme = renderer.theme;
+  const errorIcon = theme.symbol('error');
+  const lines: { segments: { text: string; style?: Record<string, unknown> }[] }[] = [];
+
+  lines.push({
+    segments: [
+      { text: `${errorIcon} `, style: { color: 'error' } },
+      { text: sanitizeFilePath(options.message), style: { bold: true, color: 'error' } },
+    ],
+  });
+
+  if (options.suggestion) {
+    lines.push({ segments: [{ text: '' }] });
+    const maxMsgWidth = renderer.width.contentWidth - 2;
+    const wrappedLines = wrap(options.suggestion, maxMsgWidth);
+    for (const line of wrappedLines) {
+      lines.push({
+        segments: [{ text: line, style: { dim: true } }],
+      });
     }
   }
+
+  lines.push({ segments: [{ text: '' }] });
+  lines.push({ segments: [{ text: 'Press q to exit', style: { dim: true } }] });
+
+  const styled = renderer.renderFrame(lines);
+  for (const l of styled) process.stderr.write(l + '\n');
 }

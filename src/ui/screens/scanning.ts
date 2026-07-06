@@ -108,6 +108,9 @@ export function renderScanPhase(
 
   // Return a Promise that will be fulfilled when completeScanPhase is called,
   // along with a progress update function.
+  // Clean up any stale pending entry for the same manager to prevent
+  // memory leaks from orphaned promises (delete is a no-op if absent).
+  _pending.delete(manager);
   const done = new Promise<{ files: number; dirs: number }>((resolve) => {
     _pending.set(manager, {
       resolve,

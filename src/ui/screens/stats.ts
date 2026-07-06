@@ -1,107 +1,74 @@
 /**
  * Stats screen — compact repository statistics with language breakdown.
  *
- * Renders a boxed summary with file/directory counts, size, depth, language
- * breakdown by percentage, largest file/directory info, and elapsed time.
- *
- * # Architecture
- * - Uses the Renderer for ANSI conversion (never emits raw codes).
- * - Uses renderBox primitive for layout.
- * - Static render (no animation) — writes once to stderr.
- *
- * # Layout (normal-width terminal)
- * ```
- * ╭─ repo-map · my-project · stats ──────────────────────────────╮
- * │                                                               │
- * │  Files  42    Dirs  12    Size  15.3 KB                       │
- * │  Depth  4    Avg files/dir  3.5                               │
- * │                                                               │
- * │  Languages                                                    │
- * │  TypeScript    30 files  (71.4%)                               │
- * │  JavaScript     8 files  (19.0%)                               │
- * │  JSON           4 files  ( 9.5%)                               │
- * │                                                               │
- * │  Largest file  src/app.ts (2.5 KB)                             │
- * │  Largest dir   src/components (15 files)                       │
- * │                                                               │
- * │  Completed in 1.2s                                            │
- * │                                                               │
- * ╰───────────────────────────────────────────────────────────────╯
- * ```
- *
- * # Narrow-terminal layout (< 60 cols)
- * No box borders. Text-only with colon-separated labels.
- *
- * # What it must NOT know about
- * - Animation manager, analysis pipeline, file system I/O
- * - Raw ANSI escape codes
+ * Uses reusable components: Panel, Footer.
+ * Uses professional icons for visual hierarchy.
  */
 
 import { Renderer } from '../renderer.js';
-import type { Line } from '../renderer.js';
-import { renderBox } from '../primitives/box.js';
-import { renderLabelValue } from '../utils/index.js';
+import { Panel } from '../components/panel.js';
+import { Footer } from '../components/footer.js';
+import type { KeyHintEntry } from '../components/footer.js';
 import { sanitizeFilePath } from '../utils/ansi.js';
 
 // ─── Types ───────────────────────────────────────────────────────
 
 export interface StatsOptions {
-  /** Name of the scanned project. */
   projectName: string;
-  /** Total number of files found. */
   totalFiles: number;
-  /** Total number of directories found. */
   totalDirectories: number;
-  /** Total size as a pre-formatted string (e.g. "15.3 KB"). */
   totalSize: string;
-  /** Maximum directory depth scanned. */
   maxDepth: number;
-  /** Language breakdown with file counts and percentages. */
   languages: { name: string; count: number; percentage: number }[];
-  /** Optional info about the largest file. */
   largestFile?: { path: string; size: string };
-  /** Optional info about the largest directory. */
   largestDir?: { path: string; files: number };
-  /** Average number of files per directory. */
   avgFilesPerDir: number;
-  /** Analysis elapsed time in seconds. */
   elapsed: number;
 }
 
-// ─── Constants ───────────────────────────────────────────────────
-// (LABEL_WIDTH is imported from shared utils)
+// ─── Public API ──────────────────────────────────────────────────
 
-// ─── Content builders ──────────────────────────────────────────
+export function renderStats(options: StatsOptions, renderer: Renderer): void {
+  const pw = renderer.width.contentWidth;
+  const isNarrow = renderer.width.isNarrow;
 
-/**
- * Build styled lines for normal/wide terminals (boxed layout).
- *
- * Layout budget: 16 lines inside box (including breathing).
- * Eye path: Metrics → Languages → Details → Elapsed
- */
-function buildBoxedLines(options: StatsOptions): Line[] {
-  const lines: Line[] = [];
+  if (isNarrow) {
+    renderNarrowStats(options, renderer);
+    return;
+  }
 
-  // ── Breathing after top border ──────────────────────────────────
-  lines.push({ segments: [{ text: '' }] });
+  const fileIcon = renderer.theme.symbol('file');
+  const folderIcon = renderer.theme.symbol('folder');
+  const langIcon = renderer.theme.symbol('language');
+  const timeIcon = renderer.theme.symbol('time');
+  const statsIcon = renderer.theme.symbol('stats');
 
-  // ── Compact metrics line 1: Files, Dirs, Size ───────────────────
-  lines.push({
+  // ── Stats Panel ──────────────────────────────────────────────
+  const panel = new Panel('stats-panel', {
+    title: `${statsIcon} ${sanitizeFilePath(options.projectName)} — stats`,
+    width: pw + 2,
+    collapsible: false,
+  });
+
+  panel.addBlank();
+
+  // Metrics line 1
+  panel.addLine({
     segments: [
-      { text: ' ' },
-      { text: 'Files', style: { bold: true } },
+      { text: '  ' },
+      { text: `${fileIcon} Files`, style: { bold: true } },
       { text: `  ${options.totalFiles}   ` },
-      { text: 'Dirs', style: { bold: true } },
+      { text: `${folderIcon} Dirs`, style: { bold: true } },
       { text: `  ${options.totalDirectories}   ` },
       { text: 'Size', style: { bold: true } },
       { text: `  ${options.totalSize}` },
     ],
   });
 
-  // ── Compact metrics line 2: Depth, Avg files/dir ────────────────
-  lines.push({
+  // Metrics line 2
+  panel.addLine({
     segments: [
-      { text: ' ' },
+      { text: '  ' },
       { text: 'Depth', style: { bold: true } },
       { text: `  ${options.maxDepth}   ` },
       { text: 'Avg files/dir', style: { bold: true } },
@@ -109,15 +76,11 @@ function buildBoxedLines(options: StatsOptions): Line[] {
     ],
   });
 
-  // ── Blank between sections ──────────────────────────────────────
-  lines.push({ segments: [{ text: '' }] });
+  panel.addBlank();
 
-  // ── Languages section header (bold, no indent) ──────────────────
-  lines.push({
-    segments: [{ text: 'Languages', style: { bold: true } }],
-  });
+  // Languages section
+  panel.addSection(` ${langIcon} Languages`);
 
-  // ── Language rows ───────────────────────────────────────────────
   if (options.languages.length > 0) {
     const nameWidth = Math.max(...options.languages.map((l) => l.name.length));
     const countWidth = Math.max(...options.languages.map((l) => String(l.count).length));
@@ -126,157 +89,111 @@ function buildBoxedLines(options: StatsOptions): Line[] {
       const paddedName = lang.name.padEnd(nameWidth);
       const paddedCount = String(lang.count).padStart(countWidth);
       const paddedPct = lang.percentage.toFixed(1).padStart(5);
-      lines.push({
-        segments: [{ text: ` ${paddedName}  ${paddedCount} files  (${paddedPct}%)` }],
+      panel.addLine({
+        segments: [{ text: ` ${langIcon} ${paddedName}  ${paddedCount} files  (${paddedPct}%)` }],
       });
     }
   } else {
-    lines.push({
-      segments: [{ text: ' No languages detected', style: { dim: true } }],
+    panel.addBlank();
+    panel.addLine({
+      segments: [{ text: ` ${renderer.theme.symbol('info')} No languages detected`, style: { dim: true } }],
+    });
+    panel.addLine({
+      segments: [{ text: '   Unable to determine the', style: { dim: true } }],
+    });
+    panel.addLine({
+      segments: [{ text: '   programming languages used', style: { dim: true } }],
+    });
+    panel.addLine({
+      segments: [{ text: '   in this repository.', style: { dim: true } }],
     });
   }
 
-  // ── Blank between sections ──────────────────────────────────────
-  lines.push({ segments: [{ text: '' }] });
-
-  // ── Largest file/dir/avg (20-char label column) ─────────────────
-  if (options.largestFile) {
-    lines.push({
-      segments: [
-        { text: renderLabelValue('Largest file', `${sanitizeFilePath(options.largestFile.path)} (${options.largestFile.size})`) },
-      ],
-    });
-  }
-  if (options.largestDir) {
-    lines.push({
-      segments: [
-        { text: renderLabelValue('Largest dir', `${sanitizeFilePath(options.largestDir.path)} (${options.largestDir.files} files)`) },
-      ],
-    });
-  }
-
-  // ── Blank between sections ──────────────────────────────────────
-  lines.push({ segments: [{ text: '' }] });
-
-  // ── Elapsed time (dim) ──────────────────────────────────────────
-  lines.push({
-    segments: [
-      { text: `Completed in ${options.elapsed.toFixed(1)}s`, style: { dim: true } },
-    ],
-  });
-
-  // ── Breathing before bottom border ──────────────────────────────
-  lines.push({ segments: [{ text: '' }] });
-
-  return lines;
-}
-
-/**
- * Build text-only lines for narrow terminals (< 60 columns).
- * No box. Information preserved.
- */
-function buildNarrowLines(options: StatsOptions): Line[] {
-  const lines: Line[] = [];
-
-  // Project name header
-  lines.push({
-    segments: [{ text: `repo-map · ${sanitizeFilePath(options.projectName)} · stats` }],
-  });
-  lines.push({ segments: [{ text: '' }] });
-
-  // Metrics
-  lines.push({
-    segments: [
-      {
-        text: `Files: ${options.totalFiles}  Dirs: ${options.totalDirectories}  Size: ${options.totalSize}  Depth: ${options.maxDepth}  Avg: ${options.avgFilesPerDir}`,
-      },
-    ],
-  });
-  lines.push({ segments: [{ text: '' }] });
-
-  // Languages
-  if (options.languages.length > 0) {
-    const nameWidth = Math.max(...options.languages.map((l) => l.name.length));
-    const countWidth = Math.max(...options.languages.map((l) => String(l.count).length));
-
-    for (const lang of options.languages) {
-      const paddedName = lang.name.padEnd(nameWidth);
-      const paddedCount = String(lang.count).padStart(countWidth);
-      const paddedPct = lang.percentage.toFixed(1).padStart(5);
-      lines.push({
-        segments: [{ text: `${paddedName}  ${paddedCount} files  (${paddedPct}%)` }],
-      });
-    }
-  } else {
-    lines.push({
-      segments: [{ text: 'No languages detected', style: { dim: true } }],
-    });
-  }
-
-  lines.push({ segments: [{ text: '' }] });
+  panel.addBlank();
 
   // Largest file/dir
   if (options.largestFile) {
-    lines.push({
-      segments: [{ text: `Largest file: ${sanitizeFilePath(options.largestFile.path)} (${options.largestFile.size})` }],
+    panel.addLine({
+      segments: [
+        { text: ` ${fileIcon} ${sanitizeFilePath(options.largestFile.path)} (${options.largestFile.size})`, style: { dim: true } },
+      ],
     });
   }
   if (options.largestDir) {
-    lines.push({
-      segments: [{ text: `Largest dir: ${sanitizeFilePath(options.largestDir.path)} (${options.largestDir.files} files)` }],
+    panel.addLine({
+      segments: [
+        { text: ` ${folderIcon} ${sanitizeFilePath(options.largestDir.path)} (${options.largestDir.files} files)`, style: { dim: true } },
+      ],
     });
   }
 
-  lines.push({ segments: [{ text: '' }] });
+  if (options.largestFile || options.largestDir) {
+    panel.addBlank();
+  }
 
-  // Elapsed
-  lines.push({
+  // Elapsed time
+  panel.addLine({
     segments: [
-      { text: `Completed in ${options.elapsed.toFixed(1)}s`, style: { dim: true } },
+      { text: ` ${timeIcon} Completed in ${options.elapsed.toFixed(1)}s`, style: { dim: true } },
     ],
   });
 
-  return lines;
+  panel.addBlank();
+
+  // Render
+  panel.write(renderer);
+
+  // Footer
+  const hints: KeyHintEntry[] = [
+    { key: '↑↓', description: 'Navigate' },
+    { key: 'q', description: 'Quit' },
+  ];
+  const footer = new Footer('stats-footer', { hints, separator: renderer.theme.symbol('separator') });
+  const footerStyled = renderer.renderFrame(footer.render(renderer));
+  if (footerStyled[0]) process.stderr.write(footerStyled[0] + '\n');
 }
 
-// ─── Public API ──────────────────────────────────────────────────
+// ─── Narrow terminal layout ─────────────────────────────────────
 
-/**
- * Render a compact statistics screen to stderr.
- *
- * Shows key metrics, language breakdown, largest file/dir, and elapsed time
- * inside a bordered box.
- * On narrow terminals (< 60 columns), renders without box borders.
- *
- * @param options  - Stats display data.
- * @param renderer - The renderer for ANSI conversion.
- */
-export function renderStats(options: StatsOptions, renderer: Renderer): void {
-  const contentWidth = renderer.width.contentWidth;
-  const isNarrow = renderer.width.isNarrow;
+function renderNarrowStats(options: StatsOptions, renderer: Renderer): void {
+  const lines: { segments: { text: string; style?: Record<string, unknown> }[] }[] = [];
+  const repoIcon = renderer.theme.symbol('repo');
+  const fileIcon = renderer.theme.symbol('file');
+  const langIcon = renderer.theme.symbol('language');
+  const timeIcon = renderer.theme.symbol('time');
 
-  const styledLines = isNarrow
-    ? buildNarrowLines(options)
-    : buildBoxedLines(options);
-  const styledStrings = renderer.renderFrame(styledLines);
+  lines.push({ segments: [{ text: `${repoIcon} ${sanitizeFilePath(options.projectName)} — stats` }] });
+  lines.push({ segments: [{ text: '' }] });
+  lines.push({
+    segments: [{
+      text: `  ${fileIcon} ${options.totalFiles}  ${options.totalDirectories} dirs  ${options.totalSize}  depth ${options.maxDepth}`,
+    }],
+  });
+  lines.push({ segments: [{ text: '' }] });
 
-  if (isNarrow) {
-    for (const line of styledStrings) {
-      process.stderr.write(line + '\n');
+  if (options.languages.length > 0) {
+    const nameWidth = Math.max(...options.languages.map((l) => l.name.length));
+    const countWidth = Math.max(...options.languages.map((l) => String(l.count).length));
+    for (const lang of options.languages) {
+      const paddedName = lang.name.padEnd(nameWidth);
+      const paddedCount = String(lang.count).padStart(countWidth);
+      const paddedPct = lang.percentage.toFixed(1).padStart(5);
+      lines.push({ segments: [{ text: `${langIcon} ${paddedName}  ${paddedCount} files  (${paddedPct}%)` }] });
     }
   } else {
-    const border = renderer.theme.border('round');
-    const boxWidth = Math.min(contentWidth + 2, renderer.width.columns);
-
-    const boxLines = renderBox(styledStrings, {
-      title: `repo-map · ${sanitizeFilePath(options.projectName)} · stats`,
-      width: boxWidth,
-      padding: 1,
-      border: border.tl ? border : undefined,
-    });
-
-    for (const line of boxLines) {
-      process.stderr.write(line + '\n');
-    }
+    lines.push({ segments: [{ text: 'No languages detected', style: { dim: true } }] });
   }
+
+  lines.push({ segments: [{ text: '' }] });
+  if (options.largestFile) {
+    lines.push({ segments: [{ text: `${fileIcon} ${sanitizeFilePath(options.largestFile.path)} (${options.largestFile.size})` }] });
+  }
+  if (options.largestDir) {
+    lines.push({ segments: [{ text: `${sanitizeFilePath(options.largestDir.path)} (${options.largestDir.files} files)` }] });
+  }
+  lines.push({ segments: [{ text: '' }] });
+  lines.push({ segments: [{ text: `${timeIcon} Completed in ${options.elapsed.toFixed(1)}s`, style: { dim: true } }] });
+
+  const styled = renderer.renderFrame(lines);
+  for (const l of styled) process.stderr.write(l + '\n');
 }

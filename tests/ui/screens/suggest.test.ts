@@ -40,9 +40,11 @@ function makeMockTheme(): Theme {
       return `${prefix}${text}${suffix}`;
     },
     symbol: (token: SymbolToken) => {
-      if (token === 'check') return '✓';
-      if (token === 'cross') return '✗';
+      if (token === 'check' || token === 'success') return '✓';
+      if (token === 'cross' || token === 'error') return '✗';
+      if (token === 'warning') return '⚠';
       if (token === 'bullet') return '·';
+      if (token === 'separator') return '·';
       return token;
     },
     border: (_style: BorderStyle): BorderChars => ({
@@ -112,7 +114,8 @@ describe('renderSuggest', () => {
   it('renders a box with suggestions title', () => {
     renderSuggest(makeDefaultOptions(), renderer);
     const output = stderrSpy.mock.calls.map((c) => c[0] as string).join('');
-    expect(output).toContain('repo-map · my-project · suggestions');
+    expect(output).toContain('my-project');
+    expect(output).toContain('suggestions');
     expect(output).toContain('╰');
     expect(output).toContain('│');
   });
@@ -159,7 +162,7 @@ describe('renderSuggest', () => {
     const output = stderrSpy.mock.calls.map((c) => c[0] as string).join('');
     // Check that ! appears near the medium priority suggestion
     const visible = stripAnsi(output);
-    expect(visible).toContain('!');
+    expect(visible).toContain('⚠');
     expect(visible).toContain('Upgrade outdated dependencies');
     expect(output).toContain(MOCK_ANSI_YELLOW);
   });
@@ -211,7 +214,7 @@ describe('renderSuggest', () => {
   it('handles empty suggestions gracefully', () => {
     renderSuggest(makeDefaultOptions({ suggestions: [] }), renderer);
     const output = stderrSpy.mock.calls.map((c) => c[0] as string).join('');
-    expect(output).toContain('No suggestions at this time');
+    expect(output).toContain('No suggestions');
     expect(output).not.toContain('NaN');
     expect(output).not.toContain('undefined');
   });
@@ -222,7 +225,7 @@ describe('renderSuggest', () => {
     expect(output).toContain('Strengths');
     expect(output).toContain('Suggestions');
     expect(output).toContain('No strengths identified');
-    expect(output).toContain('No suggestions at this time');
+    expect(output).toContain('No suggestions');
   });
 
   // ── Priority sorting ─────────────────────────────────────────

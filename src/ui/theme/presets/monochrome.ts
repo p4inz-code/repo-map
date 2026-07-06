@@ -18,10 +18,13 @@ export const monochromeTheme: Theme = {
 
   style(text: string, style?: TextStyle): string {
     if (!style) return text;
-    // Only bold and dim are available in monochrome mode
-    if (style.bold) return `\x1b[1m${text}\x1b[0m`;
-    if (style.dim) return `\x1b[2m${text}\x1b[0m`;
-    return text;
+
+    const parts: string[] = [];
+    if (style.bold) parts.push('\x1b[1m');
+    if (style.dim) parts.push('\x1b[2m');
+
+    if (parts.length === 0) return text;
+    return `${parts.join('')}${text}\x1b[0m`;
   },
 
   symbol(token: SymbolToken): string {
@@ -40,15 +43,24 @@ export const monochromeTheme: Theme = {
   },
 
   symbols: {
-    check: '✓', cross: '✗', warning: '⚠', arrow: '→',
-    bullet: '·', pointer: '▸', ellipsis: '…',
-    arrowUp: '↑', arrowDown: '↓', separator: '─',
-    filled: '█', empty: '░',
+    check: '✓', cross: '✗', warning: '⚠',
+    arrow: '→', bullet: '·', pointer: '▸',
+    ellipsis: '…', arrowUp: '↑', arrowDown: '↓',
+    separator: '─', filled: '█', empty: '░',
+    repo: '⊞', file: '⊡', folder: '▣', folderOpen: '◫',
+    code: '⟨⟩', branch: '⊸', commit: '◆', issue: '⊘',
+    tag: '⌗', star: '★', search: '⌕', setting: '⚙',
+    language: '◎', framework: '◈', test: '☷', tool: '⚒',
+    database: '⌂', package: '◉', doc: '⊏', config: '⚙',
+    script: '⌘', docker: '⊟', ci: '↻', deploy: '⇧',
+    success: '✓', error: '✗', info: 'ℹ', time: '⏱', stats: '▤',
   },
 
   borders: {
     round: { tl: '╭', tr: '╮', bl: '╰', br: '╯', h: '─', v: '│' },
     single: { tl: '┌', tr: '┐', bl: '└', br: '┘', h: '─', v: '│' },
+    double: { tl: '╔', tr: '╗', bl: '╚', br: '╝', h: '═', v: '║' },
+    thick: { tl: '┏', tr: '┓', bl: '┗', br: '┛', h: '━', v: '┃' },
     none: { tl: '', tr: '', bl: '', br: '', h: '', v: '' },
   },
 };

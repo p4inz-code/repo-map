@@ -31,9 +31,10 @@ function makeMockTheme(): Theme {
       return `${prefix}${text}${suffix}`;
     },
     symbol: (token: SymbolToken) => {
-      if (token === 'cross') return '✗';
-      if (token === 'check') return '✓';
+      if (token === 'cross' || token === 'error') return '✗';
+      if (token === 'check' || token === 'success') return '✓';
       if (token === 'arrow') return '→';
+      if (token === 'separator') return '·';
       return token;
     },
     border: (_style: BorderStyle): BorderChars => ({

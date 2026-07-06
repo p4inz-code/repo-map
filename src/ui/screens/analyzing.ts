@@ -81,6 +81,9 @@ export function renderAnalyzePhase(
   });
 
   // Return a Promise that will be fulfilled when completeAnalyzePhase is called.
+  // Clean up any stale pending entry for the same manager to prevent
+  // memory leaks from orphaned promises (delete is a no-op if absent).
+  _pending.delete(manager);
   return new Promise((resolve) => {
     _pending.set(manager, { resolve });
   });

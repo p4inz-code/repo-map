@@ -2,7 +2,7 @@
  * Symbol token definitions for the repo-map UI.
  *
  * Every symbol has a Unicode and ASCII fallback variant.
- * No emoji. No decorative characters beyond the curated set.
+ * No emoji. Professional engineering aesthetic only.
  */
 
 export type SymbolToken =
@@ -17,9 +17,45 @@ export type SymbolToken =
   | 'arrowDown'
   | 'separator'
   | 'filled'
-  | 'empty';
+  | 'empty'
+
+  // Professional icons
+  | 'repo'
+  | 'file'
+  | 'folder'
+  | 'folderOpen'
+  | 'code'
+  | 'branch'
+  | 'commit'
+  | 'issue'
+  | 'tag'
+  | 'star'
+  | 'search'
+  | 'setting'
+
+  // Category icons
+  | 'language'
+  | 'framework'
+  | 'test'
+  | 'tool'
+  | 'database'
+  | 'package'
+  | 'doc'
+  | 'config'
+  | 'script'
+  | 'docker'
+  | 'ci'
+  | 'deploy'
+
+  // Status icons
+  | 'success'
+  | 'error'
+  | 'info'
+  | 'time'
+  | 'stats';
 
 const UNICODE_SYMBOLS: Record<SymbolToken, string> = {
+  // Basic
   check: '✓',
   cross: '✗',
   warning: '⚠',
@@ -32,9 +68,45 @@ const UNICODE_SYMBOLS: Record<SymbolToken, string> = {
   separator: '─',
   filled: '█',
   empty: '░',
+
+  // Professional icons
+  repo: '⊞',
+  file: '⊡',
+  folder: '▣',
+  folderOpen: '◫',
+  code: '⟨⟩',
+  branch: '⊸',
+  commit: '◆',
+  issue: '⊘',
+  tag: '⌗',
+  star: '★',
+  search: '⌕',
+  setting: '⚙',
+
+  // Category icons
+  language: '◎',
+  framework: '◈',
+  test: '☷',
+  tool: '⚒',
+  database: '⌂',
+  package: '◉',
+  doc: '⊏',
+  config: '⚙',
+  script: '⌘',
+  docker: '⊟',
+  ci: '↻',
+  deploy: '⇧',
+
+  // Status icons
+  success: '✓',
+  error: '✗',
+  info: 'ℹ',
+  time: '⏱',
+  stats: '▤',
 };
 
 const ASCII_SYMBOLS: Record<SymbolToken, string> = {
+  // Basic
   check: '[ok]',
   cross: '[!]',
   warning: '[!]',
@@ -47,6 +119,41 @@ const ASCII_SYMBOLS: Record<SymbolToken, string> = {
   separator: '-',
   filled: '#',
   empty: '.',
+
+  // Professional icons
+  repo: '[R]',
+  file: '[f]',
+  folder: '[D]',
+  folderOpen: '[D]',
+  code: '<>',
+  branch: '->',
+  commit: '*',
+  issue: '[!]',
+  tag: '#',
+  star: '*',
+  search: '?',
+  setting: '[S]',
+
+  // Category icons
+  language: '(L)',
+  framework: '(F)',
+  test: '(T)',
+  tool: '(t)',
+  database: '(D)',
+  package: '(p)',
+  doc: '[d]',
+  config: '[c]',
+  script: '$',
+  docker: '[D]',
+  ci: '[C]',
+  deploy: '^',
+
+  // Status icons
+  success: '[ok]',
+  error: '[!]',
+  info: '(i)',
+  time: '[t]',
+  stats: '[#]',
 };
 
 /**

@@ -1,254 +1,150 @@
 /**
- * Completion screen — the final results display for repo-map.
+ * Completion Workspace — the final results display for repo-map.
  *
- * Renders a professional summary box with classification, maturity,
- * health bar, compact metrics, and language breakdown.
+ * A multi-panel workspace with a professional summary layout.
+ * Every section is a reusable Panel component.
+ * Uses professional engineering icons for visual hierarchy.
  *
- * # Architecture
- * - Uses the Renderer for ANSI conversion (never emits raw codes).
- * - Uses box primitive for structural layout.
- * - Static render (no animation) — writes once to stderr.
- *
- * # Layout (normal-width terminal)
+ * # Layout
  * ```
- * ╭─ repo-map · my-project ───────────────────────────────────────╮
- * │                                                                │
- * │  Classification    CLI Tool                              87%   │
- * │  Maturity          Active Development                          │
- * │  Health            ██████████████████░░░░░░░░  65/100           │
- * │                                                                │
- * │  Files  42    Dirs  12    Size  15.3 KB    Depth  4             │
- * │                                                                │
- * │  TypeScript  30 files (71%)                                     │
- * │  JavaScript   8 files (19%)                                     │
- * │  JSON         4 files (10%)                                     │
- * │                                                                │
- * ╰────────────────────────────────────────────────────────────────╯
+ * repo-map — Professional repository analysis    v2.2.0
+ *
+ * Project: my-project  42 files · 12 dirs · 3 languages · 0 frameworks
+ *
+ * ╭─ Project Summary ──────────────────────────────────────────╮
+ * │                                                               │
+ * │  Classification    CLI Tool                              87% │
+ * │  Maturity          Active Development                         │
+ * │  Health            ██████████████████░░░░░░░░  65/100         │
+ * │                                                               │
+ * │  Files  42    Dirs  12    Size  15.3 KB    Depth  4          │
+ * │                                                               │
+ * ╰───────────────────────────────────────────────────────────────╯
+ *
+ * ╭─ Statistics ───────────────────────────────────────────────╮
+ * │                                                               │
+ * │  ◎ TypeScript    30 files (71%)                               │
+ * │  ◎ JavaScript     8 files (19%)                               │
+ * │  ◎ JSON           4 files (10%)                               │
+ * │                                                               │
+ * ╰───────────────────────────────────────────────────────────────╯
  * ```
- *
- * # Narrow-terminal layout (< 60 cols)
- * No box borders. No bar. Text-only with colon-separated labels.
- *
- * # What it must NOT know about
- * - Animation manager (completion is static)
- * - Analysis pipeline details
- * - Raw ANSI escape codes
  */
 
 import { Renderer } from '../renderer.js';
-import type { Line } from '../renderer.js';
 import type { WidthInfo } from '../layout/width.js';
-import { renderBox } from '../primitives/box.js';
-import { LABEL_WIDTH } from '../utils/index.js';
 import { formatSize } from '../../utils.js';
 import { sanitizeFilePath } from '../utils/ansi.js';
+import { Panel } from '../components/panel.js';
+import { Title } from '../components/title.js';
+import { StatusBar } from '../components/status-bar.js';
+import { Footer } from '../components/footer.js';
+import type { KeyHintEntry } from '../components/footer.js';
+import type { Line } from '../renderer.js';
 
 // ─── Types ───────────────────────────────────────────────────────
 
 export interface CompletionOptions {
-  /** Name of the scanned project. */
   projectName: string;
-  /** Total number of files found. */
   totalFiles: number;
-  /** Total number of directories found. */
   totalDirectories: number;
-  /** Total size in bytes. */
   totalSize: number;
-  /** Maximum directory depth scanned. */
   maxDepth: number;
-  /** Project classification name (e.g. "CLI Tool"). */
   classification: string;
-  /** Classification confidence percentage (0–100). */
   classificationConfidence: number;
-  /** Project maturity label (e.g. "Active Development"). */
   maturity: string;
-  /** Overall health score (0–100). */
   healthScore: number;
-  /** Detected technologies with file counts. */
   technologies: { name: string; category: string; count?: number }[];
-  /** Optional output file path for the report. */
   outputPath?: string;
 }
 
 // ─── Constants ───────────────────────────────────────────────────
 
-/** Width of the health bar in character cells. */
 const BAR_WIDTH = 24;
+const LABEL_WIDTH = 20;
 
-// ─── Internal helpers (v2.2 patterns) ───────────────────────────
+// ─── Public API ──────────────────────────────────────────────────
 
-/**
- * Maximum number of language lines inside the boxed dashboard.
- * Derived from the 12-line content budget: 7 fixed lines (breathing,
- * classification, maturity, health, gap, metrics, gap, breathing-bottom)
- * leaves room for 4 language lines (3 languages + 1 overflow).
- */
-const MAX_LANGUAGE_LINES = 3;
-
-// ─── Dashboard content builder ──────────────────────────────────
-
-/**
- * Build the dashboard content as styled Lines.
- *
- * The layout follows the v2.2 specification:
- * - Classification, Maturity, Health (with bar) — 20-char label column
- * - Compact metrics line
- * - Clean language list
- * - Breathing whitespace between sections
- *
- * @param options      - Completion data.
- * @param contentWidth - Usable content width inside the box.
- * @param isNarrow     - Whether to use text-only layout.
- * @returns Array of styled Lines for the dashboard.
- */
-function buildDashboardLines(
+export function renderCompletion(
   options: CompletionOptions,
-  isNarrow: boolean,
-): Line[] {
+  renderer: Renderer,
+  width: WidthInfo,
+): void {
+  const isNarrow = width.isNarrow;
+  const pw = width.contentWidth;
+
   if (isNarrow) {
-    return buildNarrowLines(options);
-  }
-  return buildBoxedLines(options);
-}
-
-/**
- * Build text-only lines for narrow terminals (< 60 columns).
- * No box, no bar, no fancy alignment. Information preserved.
- */
-function buildNarrowLines(options: CompletionOptions): Line[] {
-  const lines: Line[] = [];
-
-  // Project name header
-  lines.push({
-    segments: [{ text: `repo-map · ${sanitizeFilePath(options.projectName)}` }],
-  });
-  lines.push({ segments: [{ text: '' }] });
-
-  // Classification
-  lines.push({
-    segments: [
-      { text: 'Classification: ', style: { bold: true } },
-      { text: `${options.classification} (${options.classificationConfidence}%)` },
-    ],
-  });
-
-  // Maturity
-  lines.push({
-    segments: [
-      { text: 'Maturity: ', style: { bold: true } },
-      { text: options.maturity },
-    ],
-  });
-
-  // Health (no bar — just the score)
-  lines.push({
-    segments: [
-      { text: 'Health: ', style: { bold: true } },
-      { text: `${options.healthScore}/100` },
-    ],
-  });
-
-  // Blank between sections
-  lines.push({ segments: [{ text: '' }] });
-
-  // Metrics
-  lines.push({
-    segments: [
-      {
-        text: `Files: ${options.totalFiles}  Dirs: ${options.totalDirectories}  Size: ${formatSize(options.totalSize)}  Depth: ${options.maxDepth}`,
-      },
-    ],
-  });
-
-  // Blank between sections
-  lines.push({ segments: [{ text: '' }] });
-
-  // Languages
-  const languages = options.technologies.filter(
-    (t) => t.category === 'language' && t.count !== undefined,
-  ) as { name: string; count: number }[];
-
-  if (languages.length > 0) {
-    const total = options.totalFiles || 1;
-    const visibleLangs = languages.slice(0, MAX_LANGUAGE_LINES);
-    const overflowCount = languages.length - visibleLangs.length;
-    const nameWidth = Math.max(...languages.map((l) => l.name.length));
-    const countWidth = Math.max(...languages.map((l) => String(l.count).length));
-
-    for (const lang of visibleLangs) {
-      const pct = Math.round((lang.count / total) * 100);
-      const paddedName = lang.name.padEnd(nameWidth);
-      const paddedCount = String(lang.count).padStart(countWidth);
-      lines.push({
-        segments: [{ text: `${paddedName}  ${paddedCount} files (${pct}%)` }],
-      });
-    }
-
-    if (overflowCount > 0) {
-      lines.push({
-        segments: [{ text: `+${overflowCount} more languages`, style: { dim: true } }],
-      });
-    }
-  } else {
-    lines.push({
-      segments: [{ text: 'No languages detected', style: { dim: true } }],
-    });
+    renderNarrow(options, renderer);
+    return;
   }
 
-  return lines;
-}
+  const langIcon = renderer.theme.symbol('language');
+  const fileIcon = renderer.theme.symbol('file');
+  const folderIcon = renderer.theme.symbol('folder');
 
-/**
- * Build styled lines for normal/wide terminals (boxed layout).
- *
- * Layout budget: 12 lines inside box (including breathing).
- * Eye path: Classification → Health → Metrics → Languages
- */
-function buildBoxedLines(options: CompletionOptions): Line[] {
-  const lines: Line[] = [];
+  // ── Title ───────────────────────────────────────────────────
+  const title = new Title('completion-title', {
+    text: 'repo-map',
+    subtitle: 'Professional repository analysis',
+    version: '2.2.0',
+    width: pw,
+  });
+  writeLines(title.render(renderer), renderer);
+  writeBlank();
 
-  // ── Breathing after top border ──────────────────────────────────
-  lines.push({ segments: [{ text: '' }] });
+  // ── StatusBar ───────────────────────────────────────────────
+  const langCount = options.technologies.filter((t) => t.category === 'language').length;
+  const frameworkCount = options.technologies.filter((t) => t.category === 'framework').length;
+  const statusBar = new StatusBar('completion-status', {
+    left: `${renderer.theme.symbol('repo')} ${sanitizeFilePath(options.projectName)}`,
+    right: `${fileIcon} ${options.totalFiles} files · ${folderIcon} ${options.totalDirectories} dirs · ${langIcon} ${langCount} languages · ${frameworkCount} frameworks`,
+    dim: true,
+  });
+  writeLines(statusBar.render(renderer), renderer);
+  writeBlank();
 
-  // ── Classification (focal point) ────────────────────────────────
-  lines.push({
+  // ── Project Summary Panel ───────────────────────────────────
+  const summaryPanel = new Panel('summary-panel', {
+    title: 'Project Summary',
+    width: pw + 2,
+    collapsible: false,
+  });
+
+  const filledCount = Math.round((Math.max(0, Math.min(options.healthScore, 100)) / 100) * BAR_WIDTH);
+  const emptyCount = BAR_WIDTH - filledCount;
+
+  summaryPanel.addBlank();
+  summaryPanel.addLine({
     segments: [
+      { text: '  ' },
       { text: 'Classification'.padEnd(LABEL_WIDTH), style: { bold: true } },
       { text: options.classification },
       { text: `${options.classificationConfidence}%`.padStart(6), style: { dim: true } },
     ],
   });
-
-  // ── Maturity ────────────────────────────────────────────────────
-  lines.push({
+  summaryPanel.addLine({
     segments: [
+      { text: '  ' },
       { text: 'Maturity'.padEnd(LABEL_WIDTH), style: { bold: true } },
       { text: options.maturity },
     ],
   });
-
-  // ── Health bar ──────────────────────────────────────────────────
-  const filledCount = Math.round((Math.max(0, Math.min(options.healthScore, 100)) / 100) * BAR_WIDTH);
-  const emptyCount = BAR_WIDTH - filledCount;
-  lines.push({
+  summaryPanel.addLine({
     segments: [
+      { text: '  ' },
       { text: 'Health'.padEnd(LABEL_WIDTH), style: { bold: true } },
       { text: '█'.repeat(filledCount), style: { color: 'bar-fill' } },
       { text: '░'.repeat(emptyCount), style: { color: 'bar-empty' } },
       { text: `  ${options.healthScore}/100`, style: { dim: true } },
     ],
   });
-
-  // ── Blank between sections ──────────────────────────────────────
-  lines.push({ segments: [{ text: '' }] });
-
-  // ── Compact metrics line (3-space gaps per spec §8) ─────────────
-  lines.push({
+  summaryPanel.addBlank();
+  summaryPanel.addLine({
     segments: [
-      { text: ' ' },
-      { text: 'Files', style: { bold: true } },
+      { text: '  ' },
+      { text: `${fileIcon} Files`, style: { bold: true } },
       { text: `  ${options.totalFiles}   ` },
-      { text: 'Dirs', style: { bold: true } },
+      { text: `${folderIcon} Dirs`, style: { bold: true } },
       { text: `  ${options.totalDirectories}   ` },
       { text: 'Size', style: { bold: true } },
       { text: `  ${formatSize(options.totalSize)}   ` },
@@ -256,18 +152,130 @@ function buildBoxedLines(options: CompletionOptions): Line[] {
       { text: `  ${options.maxDepth}` },
     ],
   });
+  summaryPanel.addBlank();
 
-  // ── Blank between sections ──────────────────────────────────────
+  writePanel(summaryPanel, renderer);
+  writeBlank();
+
+  // ── Statistics Panel ────────────────────────────────────────
+  const languages = options.technologies.filter(
+    (t) => t.category === 'language' && t.count !== undefined,
+  ) as { name: string; count: number }[];
+
+  const statsPanel = new Panel('stats-panel', {
+    title: 'Statistics',
+    width: pw + 2,
+    collapsible: true,
+  });
+
+  const maxLangLines = 5;
+  statsPanel.addBlank();
+  if (languages.length > 0) {
+    const total = options.totalFiles || 1;
+    const visibleLangs = languages.slice(0, maxLangLines);
+    const overflowCount = languages.length - visibleLangs.length;
+    const nameWidth = Math.max(...languages.map((l) => l.name.length));
+    const countWidth = Math.max(...languages.map((l) => String(l.count).length));
+
+    for (const lang of visibleLangs) {
+      const pct = Math.round((lang.count / total) * 100);
+      const paddedName = lang.name.padEnd(nameWidth);
+      const paddedCount = String(lang.count).padStart(countWidth);
+      statsPanel.addLine({
+        segments: [{ text: ` ${langIcon} ${paddedName}  ${paddedCount} files (${pct}%)` }],
+      });
+    }
+
+    if (overflowCount > 0) {
+      statsPanel.addLine({
+        segments: [{ text: `  +${overflowCount} more languages`, style: { dim: true } }],
+      });
+    }
+  } else {
+    statsPanel.addBlank();
+    statsPanel.addLine({
+        segments: [{ text: ` ${renderer.theme.symbol('info')} No languages detected`, style: { dim: true } }],
+      });
+      statsPanel.addLine({
+        segments: [{ text: '   Unable to determine programming', style: { dim: true } }],
+      });
+      statsPanel.addLine({
+        segments: [{ text: '   languages in this repository.', style: { dim: true } }],
+      });
+  }
+  statsPanel.addBlank();
+
+  writePanel(statsPanel, renderer);
+  writeBlank();
+
+  // ── Footer ──────────────────────────────────────────────────
+  const hints: KeyHintEntry[] = [
+    { key: '↑↓', description: 'Navigate' },
+    { key: '←→', description: 'Expand' },
+    { key: 'Tab', description: 'Next' },
+    { key: 'Enter', description: 'Select' },
+    { key: '/', description: 'Search', hidden: true },
+    { key: '?', description: 'Help' },
+    { key: 'q', description: 'Quit' },
+  ];
+  const footer = new Footer('completion-footer', {
+    hints,
+    separator: renderer.theme.symbol('separator'),
+  });
+  writeLines(footer.render(renderer), renderer);
+
+  if (options.outputPath) {
+    process.stderr.write(`\nOutput written to ${options.outputPath}\n`);
+  }
+}
+
+// ─── Narrow terminal layout ─────────────────────────────────────
+
+function renderNarrow(options: CompletionOptions, renderer: Renderer): void {
+  const lines: { segments: { text: string; style?: Record<string, unknown> }[] }[] = [];
+
+  const repoIcon = renderer.theme.symbol('repo');
+  const fileIcon = renderer.theme.symbol('file');
+  const folderIcon = renderer.theme.symbol('folder');
+
+  lines.push({
+    segments: [{ text: `${repoIcon} ${sanitizeFilePath(options.projectName)}` }],
+  });
+  lines.push({ segments: [{ text: '' }] });
+  lines.push({
+    segments: [
+      { text: '  Classification: ', style: { bold: true } },
+      { text: `${options.classification} (${options.classificationConfidence}%)` },
+    ],
+  });
+  lines.push({
+    segments: [
+      { text: '  Maturity: ', style: { bold: true } },
+      { text: options.maturity },
+    ],
+  });
+  lines.push({
+    segments: [
+      { text: '  Health: ', style: { bold: true } },
+      { text: `${options.healthScore}/100` },
+    ],
+  });
+  lines.push({ segments: [{ text: '' }] });
+  lines.push({
+    segments: [{
+      text: `  ${fileIcon} ${options.totalFiles}  ${folderIcon} ${options.totalDirectories}  ${formatSize(options.totalSize)}  depth ${options.maxDepth}`,
+    }],
+  });
   lines.push({ segments: [{ text: '' }] });
 
-  // ── Languages ───────────────────────────────────────────────────
+  const langIcon = renderer.theme.symbol('language');
   const languages = options.technologies.filter(
     (t) => t.category === 'language' && t.count !== undefined,
   ) as { name: string; count: number }[];
 
   if (languages.length > 0) {
     const total = options.totalFiles || 1;
-    const visibleLangs = languages.slice(0, MAX_LANGUAGE_LINES);
+    const visibleLangs = languages.slice(0, 3);
     const overflowCount = languages.length - visibleLangs.length;
     const nameWidth = Math.max(...languages.map((l) => l.name.length));
     const countWidth = Math.max(...languages.map((l) => String(l.count).length));
@@ -277,77 +285,41 @@ function buildBoxedLines(options: CompletionOptions): Line[] {
       const paddedName = lang.name.padEnd(nameWidth);
       const paddedCount = String(lang.count).padStart(countWidth);
       lines.push({
-        segments: [{ text: ` ${paddedName}  ${paddedCount} files (${pct}%)` }],
+        segments: [{ text: ` ${langIcon} ${paddedName}  ${paddedCount} files (${pct}%)` }],
       });
     }
 
     if (overflowCount > 0) {
       lines.push({
-        segments: [{ text: `  +${overflowCount} more languages`, style: { dim: true } }],
+        segments: [{ text: `  +${overflowCount} more`, style: { dim: true } }],
       });
     }
   } else {
     lines.push({
-      segments: [{ text: ' No languages detected', style: { dim: true } }],
+      segments: [{ text: '  No languages detected', style: { dim: true } }],
     });
   }
 
-  // ── Breathing before bottom border ──────────────────────────────
-  lines.push({ segments: [{ text: '' }] });
+  const styledStrings = renderer.renderFrame(lines);
+  for (const l of styledStrings) process.stderr.write(l + '\n');
 
-  return lines;
-}
-
-// ─── Public API ──────────────────────────────────────────────────
-
-/**
- * Render the completion screen to stderr.
- *
- * Builds a professional summary box with classification, health bar,
- * compact metrics, and language breakdown.
- * On narrow terminals (< 60 columns), renders without box borders
- * for readability.
- *
- * @param options - Completion data to display.
- * @param renderer - The renderer for ANSI conversion.
- * @param width    - Current terminal width info for layout adaptation.
- */
-export function renderCompletion(
-  options: CompletionOptions,
-  renderer: Renderer,
-  width: WidthInfo,
-): void {
-  const contentWidth = width.contentWidth;
-  const isNarrow = width.isNarrow;
-
-  // Build dashboard content as styled Lines
-  const styledLines = buildDashboardLines(options, isNarrow);
-  const styledStrings = renderer.renderFrame(styledLines);
-
-  if (isNarrow) {
-    // Narrow terminal — no box, write content directly
-    for (const line of styledStrings) {
-      process.stderr.write(line + '\n');
-    }
-  } else {
-    // Normal/wide terminal — wrap in a box
-    const border = renderer.theme.border('round');
-    const boxWidth = Math.min(contentWidth + 2, width.columns);
-
-    const boxLines = renderBox(styledStrings, {
-      title: `repo-map · ${sanitizeFilePath(options.projectName)}`,
-      width: boxWidth,
-      padding: 1,
-      border: border.tl ? border : undefined,
-    });
-
-    for (const line of boxLines) {
-      process.stderr.write(line + '\n');
-    }
-  }
-
-  // Output path (outside the box, below)
   if (options.outputPath) {
     process.stderr.write(`\nOutput written to ${options.outputPath}\n`);
   }
+}
+
+// ─── Helpers ───────────────────────────────────────────────────
+
+function writeLines(lines: Line[], renderer: Renderer): void {
+  const styled = renderer.renderFrame(lines);
+  for (const l of styled) process.stderr.write(l + '\n');
+}
+
+function writeBlank(): void {
+  process.stderr.write('\n');
+}
+
+function writePanel(panel: Panel, renderer: Renderer): void {
+  const lines = panel.renderBoxed(renderer);
+  for (const l of lines) process.stderr.write(l + '\n');
 }

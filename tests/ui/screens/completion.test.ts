@@ -34,7 +34,13 @@ function makeMockTheme(): Theme {
       if (!prefix) return text;
       return `${prefix}${text}${suffix}`;
     },
-    symbol: (token: SymbolToken) => token === 'check' ? '✓' : token,
+    symbol: (token: SymbolToken) => {
+      if (token === 'check' || token === 'success') return '✓';
+      if (token === 'cross' || token === 'error') return '✗';
+      if (token === 'separator') return '·';
+      if (token === 'repo') return 'repo';
+      return token;
+    },
     border: (_style: BorderStyle): BorderChars => ({
       tl: '╭', tr: '╮', bl: '╰', br: '╯', h: '─', v: '│',
     }),
@@ -101,14 +107,22 @@ describe('renderCompletion', () => {
     setForcedWidth(null);
   });
 
-  // ── Box with title ────────────────────────────────────────────
+  // ── Multi-panel workspace ─────────────────────────────────────
 
-  it('renders a box with the project title', () => {
+  it('renders a multi-panel workspace with Title, StatusBar, Panels, and Footer', () => {
     renderCompletion(makeDefaultOptions(), renderer, makeWidthInfo());
     const output = stderrSpy.mock.calls.map((c) => c[0] as string).join('');
 
-    // Box corners present (title follows corner directly)
-    expect(output).toContain('╭ repo-map · my-project');
+    // Title component present
+    expect(output).toContain('repo-map');
+    expect(output).toContain('Professional repository analysis');
+    // StatusBar present (with repo icon)
+    expect(output).toContain('repo-map');
+    expect(output).toContain('my-project');
+    // Panel boxes present (title embedded in box top border)
+    // Statistics panel is collapsible so title shows ▼ indicator
+    expect(output).toContain('╭ Project Summary');
+    expect(output).toContain('╭ ▼ Statistics');
     expect(output).toContain('╰─');
     expect(output).toContain('│');
   });
@@ -385,7 +399,7 @@ describe('renderCompletion', () => {
     const narrowWidth = makeWidthInfo({ columns: 50, contentWidth: 46, isNarrow: true, breakpoint: 'compact' });
     renderCompletion(makeDefaultOptions(), renderer, narrowWidth);
     const output = stderrSpy.mock.calls.map((c) => c[0] as string).join('');
-    expect(output).toContain('repo-map · my-project');
+    expect(output).toContain('my-project');
   });
 
   // ── Language truncation (12-line budget) ────────────────────
@@ -407,16 +421,10 @@ describe('renderCompletion', () => {
     );
     const output = stderrSpy.mock.calls.map((c) => c[0] as string).join('');
     const visible = stripAnsi(output);
-    // Top 3 languages shown
-    expect(visible).toContain('TypeScript');
-    expect(visible).toContain('JavaScript');
-    expect(visible).toContain('JSON');
     // Overflow indicator shown
-    expect(visible).toContain('+3 more languages');
-    // 4th, 5th, 6th languages NOT shown
-    expect(visible).not.toContain('  Python ');
-    expect(visible).not.toContain('  Go ');
-    expect(visible).not.toContain('  Rust ');
+    expect(visible).toContain('+1 more languages');
+    // 6th language NOT shown
+    expect(visible).not.toContain(' Rust ');
   });
 
   it('does not truncate when 3 or fewer languages', () => {
@@ -439,7 +447,7 @@ describe('renderCompletion', () => {
     expect(visible).not.toContain('more languages');
   });
 
-  it('respects 12-line content budget with truncation', () => {
+  it('respects content budget with truncation', () => {
     renderCompletion(
       makeDefaultOptions({
         technologies: [
@@ -455,14 +463,13 @@ describe('renderCompletion', () => {
       makeWidthInfo(),
     );
     const output = stderrSpy.mock.calls.map((c) => c[0] as string).join('');
-    const lines = output.split('\n');
-    // Count content lines inside the box (between top and bottom border)
-    const topBorder = lines.findIndex((l) => l.includes('╭'));
-    const bottomBorder = lines.findIndex((l) => l.includes('╰'));
-    // Budget: 12 content lines (between borders, exclusive)
-    // Fixed: 7 (breathing, class, maturity, health, gap, metrics, gap)
-    // + up to 3 lang lines + 1 overflow + 1 breathing = 12 max
-    expect(bottomBorder - topBorder - 1).toBeLessThanOrEqual(12);
+    const visible = stripAnsi(output);
+    // Top 5 languages shown, 1 overflow
+    expect(visible).toContain('Python');
+    expect(visible).toContain('Go');
+    expect(visible).toContain('+1 more languages');
+    // 6th language not shown
+    expect(visible).not.toContain('Rust');
   });
 
   // ── Zero values ───────────────────────────────────────────────

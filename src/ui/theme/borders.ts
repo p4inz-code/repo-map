@@ -2,10 +2,16 @@
  * Border character definitions for the repo-map CLI.
  *
  * Maps border styles to their character sets.
- * Supports rounded, single-line, and no-border variants.
+ * Supports rounded, single, double, thick, and no-border variants.
+ * Different styles convey visual hierarchy:
+ *   - round: primary panels (default, friendly)
+ *   - single: secondary panels (subtle, informational)
+ *   - double: dialog/overlay panels (important)
+ *   - thick: error panels (high emphasis)
+ *   - none: free-form layout (no borders)
  */
 
-export type BorderStyle = 'round' | 'single' | 'none';
+export type BorderStyle = 'round' | 'single' | 'double' | 'thick' | 'none';
 
 export interface BorderChars {
   tl: string;
@@ -23,6 +29,14 @@ const BORDERS: Record<BorderStyle, { unicode: BorderChars; ascii: BorderChars }>
   },
   single: {
     unicode: { tl: '┌', tr: '┐', bl: '└', br: '┘', h: '─', v: '│' },
+    ascii: { tl: '+', tr: '+', bl: '+', br: '+', h: '-', v: '|' },
+  },
+  double: {
+    unicode: { tl: '╔', tr: '╗', bl: '╚', br: '╝', h: '═', v: '║' },
+    ascii: { tl: '+', tr: '+', bl: '+', br: '+', h: '=', v: '|' },
+  },
+  thick: {
+    unicode: { tl: '┏', tr: '┓', bl: '┗', br: '┛', h: '━', v: '┃' },
     ascii: { tl: '+', tr: '+', bl: '+', br: '+', h: '-', v: '|' },
   },
   none: {

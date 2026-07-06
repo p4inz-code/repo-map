@@ -1,8 +1,9 @@
 /**
- * High Contrast theme preset — bold text, background fills, clear visual separation.
+ * High Contrast theme preset — bold text, thick borders, clear visual separation.
  *
- * Designed for accessibility in bright environments or for users who need
- * stronger visual distinction between elements.
+ * Designed for accessibility — never relies on color alone.
+ * Uses thick borders for primary panels, double borders for dialogs,
+ * and always applies bold for readability.
  */
 
 import type { Theme, ColorToken, ColorMode, SymbolToken, BorderStyle, TextStyle } from '../index.js';
@@ -26,8 +27,9 @@ export const highContrastTheme: Theme = {
       const code = resolveColor(style.color, 'truecolor');
       if (code) parts.push(code);
     }
-    // High contrast always applies bold for readability
+    // High-contrast: always apply bold for readability
     parts.push('\x1b[1m');
+    // Dim only when explicitly requested (combined with bold for readability)
     if (style.dim) parts.push('\x1b[2m');
 
     if (parts.length === 0) return text;
@@ -61,15 +63,24 @@ export const highContrastTheme: Theme = {
   },
 
   symbols: {
-    check: '✓', cross: '✗', warning: '⚠', arrow: '→',
-    bullet: '·', pointer: '▸', ellipsis: '…',
-    arrowUp: '↑', arrowDown: '↓', separator: '─',
-    filled: '▓', empty: '░',
+    check: '✓', cross: '✗', warning: '⚠',
+    arrow: '→', bullet: '·', pointer: '▸',
+    ellipsis: '…', arrowUp: '↑', arrowDown: '↓',
+    separator: '─', filled: '▓', empty: '░',
+    repo: '⊞', file: '⊡', folder: '▣', folderOpen: '◫',
+    code: '⟨⟩', branch: '⊸', commit: '◆', issue: '⊘',
+    tag: '⌗', star: '★', search: '⌕', setting: '⚙',
+    language: '◎', framework: '◈', test: '☷', tool: '⚒',
+    database: '⌂', package: '◉', doc: '⊏', config: '⚙',
+    script: '⌘', docker: '⊟', ci: '↻', deploy: '⇧',
+    success: '✓', error: '✗', info: 'ℹ', time: '⏱', stats: '▤',
   },
 
   borders: {
     round: { tl: '╭', tr: '╮', bl: '╰', br: '╯', h: '━', v: '┃' },
     single: { tl: '┏', tr: '┓', bl: '┗', br: '┛', h: '━', v: '┃' },
+    double: { tl: '╔', tr: '╗', bl: '╚', br: '╝', h: '═', v: '║' },
+    thick: { tl: '┏', tr: '┓', bl: '┗', br: '┛', h: '━', v: '┃' },
     none: { tl: '', tr: '', bl: '', br: '', h: '', v: '' },
   },
 };

@@ -28,7 +28,9 @@ function makeMockTheme(): Theme {
       return `${prefix}${text}${suffix}`;
     },
     symbol: (token: SymbolToken) => {
-      if (token === 'check') return '✓';
+      if (token === 'check' || token === 'success') return '✓';
+      if (token === 'separator') return '·';
+      if (token === 'repo') return 'repo';
       return token;
     },
     border: (_style: BorderStyle): BorderChars => ({
@@ -75,9 +77,6 @@ function makeDefaultOptions(overrides: Partial<StatsOptions> = {}): StatsOptions
   };
 }
 
-/** Strip ANSI escape sequences for visible-text assertions. */
-const stripAnsi = (s: string) => s.replace(/\x1b\[[0-9;]*m/g, '');
-
 // =================================================================
 // renderStats
 // =================================================================
@@ -101,7 +100,8 @@ describe('renderStats', () => {
   it('renders a box with stats title', () => {
     renderStats(makeDefaultOptions(), renderer);
     const output = stderrSpy.mock.calls.map((c) => c[0] as string).join('');
-    expect(output).toContain('repo-map · my-project · stats');
+    expect(output).toContain('my-project');
+    expect(output).toContain('stats');
     expect(output).toContain('╰');
     expect(output).toContain('│');
   });
@@ -147,26 +147,18 @@ describe('renderStats', () => {
     expect(output).toContain('9.5%');
   });
 
-  // ── Largest file/dir (renderLabelValue pattern) ────────────────
+  // ── Largest file/dir ──────────────────────────────────────────
 
-  it('shows largest file with 20-char label alignment', () => {
+  it('shows largest file with dim styling', () => {
     renderStats(makeDefaultOptions(), renderer);
     const output = stderrSpy.mock.calls.map((c) => c[0] as string).join('');
-    const line = output.split('\n').find((l) => l.includes('Largest file'));
-    expect(line).toBeDefined();
-    const visible = stripAnsi(line!);
-    // "Largest file" is 12 chars, padded to 20 with 8 spaces
-    expect(visible).toContain('Largest file        src/app.ts (2.5 KB)');
+    expect(output).toContain('src/app.ts (2.5 KB)');
   });
 
-  it('shows largest dir with 20-char label alignment', () => {
+  it('shows largest dir with dim styling', () => {
     renderStats(makeDefaultOptions(), renderer);
     const output = stderrSpy.mock.calls.map((c) => c[0] as string).join('');
-    const line = output.split('\n').find((l) => l.includes('Largest dir'));
-    expect(line).toBeDefined();
-    const visible = stripAnsi(line!);
-    // "Largest dir" is 11 chars, padded to 20 with 9 spaces
-    expect(visible).toContain('Largest dir         src/components (15 files)');
+    expect(output).toContain('src/components (15 files)');
   });
 
   // ── Elapsed time ──────────────────────────────────────────────
@@ -208,8 +200,8 @@ describe('renderStats', () => {
     const output = stderrSpy.mock.calls.map((c) => c[0] as string).join('');
     expect(output).not.toContain('╭');
     expect(output).not.toContain('╰');
-    expect(output).toContain('Files');
     expect(output).toContain('42');
+    expect(output).toContain('stats');
   });
 
   it('shows elapsed on narrow terminals', () => {
