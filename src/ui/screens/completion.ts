@@ -35,12 +35,14 @@ import { Renderer } from '../renderer.js';
 import type { WidthInfo } from '../layout/width.js';
 import { formatSize } from '../../utils.js';
 import { sanitizeFilePath } from '../utils/ansi.js';
+import { CLI_VERSION } from '../../types.js';
 import { Panel } from '../components/panel.js';
 import { Title } from '../components/title.js';
 import { StatusBar } from '../components/status-bar.js';
 import { Footer } from '../components/footer.js';
 import type { KeyHintEntry } from '../components/footer.js';
 import type { Line } from '../renderer.js';
+import { renderScoreBar } from '../shared/score-bar.js';
 
 // ─── Types ───────────────────────────────────────────────────────
 
@@ -86,7 +88,7 @@ export function renderCompletion(
   const title = new Title('completion-title', {
     text: 'repo-map',
     subtitle: 'Professional repository analysis',
-    version: '2.2.0',
+    version: CLI_VERSION,
     width: pw,
   });
   writeLines(title.render(renderer), renderer);
@@ -110,8 +112,7 @@ export function renderCompletion(
     collapsible: false,
   });
 
-  const filledCount = Math.round((Math.max(0, Math.min(options.healthScore, 100)) / 100) * BAR_WIDTH);
-  const emptyCount = BAR_WIDTH - filledCount;
+  const { filled: filledCount, empty: emptyCount } = renderScoreBar(options.healthScore, BAR_WIDTH);
 
   summaryPanel.addBlank();
   summaryPanel.addLine({

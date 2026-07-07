@@ -224,7 +224,7 @@ export class CommandPalette extends Component {
     lines.push(blank());
     lines.push({
       segments: [
-        { text: '   ↑↓ Navigate  ·  Enter Select  ·  Esc Close', style: { dim: true } },
+        { text: '   ↑↓ Navigate · Enter Select · Esc Close', style: { dim: true } },
       ],
     });
 
@@ -233,16 +233,71 @@ export class CommandPalette extends Component {
 
   // ── Internal ─────────────────────────────────────────────────
 
-  /** Get filtered command list based on current filter. */
+  /** Get filtered command list based on current filter, sorted by relevance. */
   private _getFilteredCommands(): CommandEntry[] {
     if (!this._filter) {
       return this._commands.filter((c) => c.label !== '');
     }
 
-    const lower = this._filter.toLowerCase();
-    return this._commands.filter((cmd) => {
-      if (!cmd.label) return false;
-      return cmd.label.toLowerCase().includes(lower);
-    });
+    const q = this._filter.toLowerCase();
+    const scored = this._commands
+      .filter((cmd) => cmd.label && fuzzyScore(q, cmd.label.toLowerCase()) > 0)
+      .map((cmd) => ({
+        cmd,
+        score: fuzzyScore(q, cmd.label.toLowerCase()),
+      }))
+      .sort((a, b) => {
+        if (b.score !== a.score) return b.score - a.score;
+        // Stable ordering: preserve original list order for ties
+        return this._commands.indexOf(a.cmd) - this._commands.indexOf(b.cmd);
+      });
+
+    return scored.map((s) => s.cmd);
   }
+}
+
+// ─── Fuzzy scoring ────────────────────────────────────────────
+
+/**
+ * Lightweight deterministic fuzzy scorer.
+ *
+ * Scores how well `query` matches `label` (both must be lowercase).
+ * Higher scores = better match. Returns 0 if not all query chars match.
+ *
+ * Priority:
+ *   1. Exact prefix match (highest)
+ *   2. Contiguous substring match anywhere
+ *   3. Non-contiguous (fuzzy) match — earlier matches + shorter gaps = better
+ */
+function fuzzyScore(query: string, label: string): number {
+  // Exact prefix match ranks highest
+  if (label.startsWith(query)) return 1_000_000;
+
+  // Contiguous substring match ranks next
+  const contIdx = label.indexOf(query);
+  if (contIdx >= 0) {
+    return 500_000 + (label.length - contIdx);
+  }
+
+  // Non-contiguous fuzzy match — try to match all chars in order
+  let labelIdx = 0;
+  let firstMatchPos = -1;
+  let totalGap = 0;
+  let prevMatchPos = -1;
+
+  for (let qi = 0; qi < query.length; qi++) {
+    // Scan forward for the next matching character
+    while (labelIdx < label.length && label[labelIdx] !== query[qi]) {
+      labelIdx++;
+    }
+    if (labelIdx >= label.length) return 0; // character not found
+
+    if (firstMatchPos < 0) firstMatchPos = labelIdx;
+    if (prevMatchPos >= 0) totalGap += labelIdx - prevMatchPos - 1;
+    prevMatchPos = labelIdx;
+    labelIdx++;
+  }
+
+  // Base score for fuzzy match, plus early-match bonus, minus gap penalty
+  return 100_000 + (label.length - firstMatchPos) * 100 - totalGap * 10;
 }

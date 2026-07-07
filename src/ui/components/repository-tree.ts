@@ -192,6 +192,15 @@ export class RepositoryTree extends Component {
     return this._visibleNodes.length;
   }
 
+  /**
+   * Position label for status line display: "selected/total".
+   * Returns empty string when tree is empty or not focused.
+   */
+  get positionLabel(): string {
+    if (this._visibleNodes.length === 0) return '';
+    return `${this._selectedIndex + 1}/${this._visibleNodes.length}`;
+  }
+
   /** Get the currently selected visible node. */
   get selectedNode(): VisibleNode | undefined {
     return this._visibleNodes[this._selectedIndex];
@@ -336,7 +345,7 @@ export class RepositoryTree extends Component {
     } else if (node.depth > 1) {
       // Move to parent
       const parentPath = this._getParentPath(node.path);
-      const parentIndex = this._visibleNodes.findIndex((v) => v.path === parentPath);
+      const parentIndex = this._visibleNodes.findIndex((v) => v.path.replace(/\\/g, '/') === parentPath);
       if (parentIndex >= 0) {
         this._selectedIndex = parentIndex;
         this._ensureVisible();
@@ -452,27 +461,59 @@ export class RepositoryTree extends Component {
 
       const text = `${prefix}${nameStr}${metaStr}`;
 
+      const pointerStr = this._focused ? `${_renderer.theme.symbol('pointer')} ` : '  ';
+
       if (isSelected) {
         lines.push({
-          segments: [{ text, style: { bold: true } }],
+          segments: [
+            { text: pointerStr, style: { bold: true } },
+            { text, style: { bold: true } },
+          ],
         });
       } else if (isSelectedBlur) {
         lines.push({
-          segments: [{ text, style: { dim: true } }],
+          segments: [
+            { text: '  ', style: { dim: true } },
+            { text, style: { dim: true } },
+          ],
         });
       } else {
         lines.push({
-          segments: [{ text }],
+          segments: [{ text: '  ' + text }],
         });
       }
     }
 
-    // Pad remaining lines
+    // Pad remaining lines with spaces for consistent scrollbar alignment
     const rendered = lines.length;
     const remaining = this._height - rendered;
     if (remaining > 0) {
       for (let i = 0; i < remaining; i++) {
-        lines.push(blank());
+        lines.push({ segments: [{ text: ' '.repeat(Math.max(1, this._width)) }] });
+      }
+    }
+
+    // ── Scrollbar ──────────────────────────────────────────────
+    // Only show when content exceeds viewport
+    const totalNodes = this._visibleNodes.length;
+    if (totalNodes > this._height) {
+      const filled = _renderer.theme.symbol('filled');
+      const empty = _renderer.theme.symbol('empty');
+      const maxOff = totalNodes - this._height;
+      const thumbSize = Math.max(1, Math.round(this._height * (this._height / totalNodes)));
+      const thumbPos = this._scrollOffset > 0
+        ? Math.round((this._scrollOffset / maxOff) * (this._height - thumbSize))
+        : 0;
+
+      for (let i = 0; i < lines.length; i++) {
+        const isThumb = i >= thumbPos && i < thumbPos + thumbSize;
+        const char = isThumb ? filled : empty;
+        // Append scrollbar character to existing text
+        const existing = lines[i];
+        if (existing && existing.segments.length > 0) {
+          const last = existing.segments[existing.segments.length - 1];
+          last.text += char;
+        }
       }
     }
 

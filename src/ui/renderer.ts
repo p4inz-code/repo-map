@@ -49,6 +49,16 @@ export class Renderer {
   private _width: WidthInfo;
   private _lastLineCount: number = 0;
 
+  // ── Rendered-frame cache ───────────────────────────────────────
+  /** Hash key of the most recently rendered input Lines[]. */
+  private _lastFrameInputKey: string | null = null;
+  /** Cached ANSI-wrapped output from the last renderFrame() call. */
+  private _lastFrameOutput: string[] | null = null;
+  /** Snapshot of theme name for detecting theme swaps. */
+  private _lastThemeName: string = '';
+  /** Snapshot of terminal columns for detecting dimension changes. */
+  private _lastWidthColumns: number = 0;
+
   /**
    * @param theme - Resolved theme for ANSI code resolution.
    * @param width - Terminal width info for content width awareness.
@@ -56,6 +66,8 @@ export class Renderer {
   constructor(theme: Theme, width: WidthInfo) {
     this._theme = theme;
     this._width = width;
+    this._lastThemeName = theme.name;
+    this._lastWidthColumns = width.columns;
   }
 
   // ── Accessors ──────────────────────────────────────────────────
@@ -83,6 +95,11 @@ export class Renderer {
    * Each Segment's text is styled via `Theme.style()`, then all
    * segments in a Line are joined to produce the final string.
    *
+   * Caches the result keyed by content hash. When the same Lines
+   * are passed again, the cached ANSI output is returned without
+   * re-running Theme.style() for every segment. The cache is
+   * invalidated when theme or terminal width changes.
+   *
    * Updates internal `lastLineCount` for use with `buildUpdate()`.
    *
    * @param lines - The styled lines to render.
@@ -90,7 +107,29 @@ export class Renderer {
    */
   renderFrame(lines: Line[]): string[] {
     this._lastLineCount = lines.length;
-    return lines.map((line) => this._renderLine(line));
+
+    // Derive a deterministic key from the input lines for cache lookup
+    const inputKey = this._computeLinesKey(lines);
+
+    // Check cache: same input + same theme + same terminal dimensions
+    if (
+      this._lastFrameOutput !== null &&
+      this._lastFrameInputKey === inputKey &&
+      this._lastThemeName === this._theme.name &&
+      this._lastWidthColumns === this._width.columns
+    ) {
+      return this._lastFrameOutput;
+    }
+
+    // Cache miss or invalidation — render fresh
+    const output = lines.map((line) => this._renderLine(line));
+
+    this._lastFrameInputKey = inputKey;
+    this._lastFrameOutput = output;
+    this._lastThemeName = this._theme.name;
+    this._lastWidthColumns = this._width.columns;
+
+    return output;
   }
 
   /**
@@ -167,5 +206,45 @@ export class Renderer {
     return line.segments
       .map((seg) => this._theme.style(seg.text, seg.style))
       .join('');
+  }
+
+  /**
+   * Compute a deterministic string key for an array of Lines.
+   *
+   * The key encodes every segment's text and style so that two
+   * Line[] arrays with identical content produce the same key.
+   *
+   * Format:
+   *   For each line: seg1_text[|style_flags]\tseg2_text[|style_flags]\t...
+   *   Lines separated by \n
+   *   Style flags: b=bold, d=dim, followed by color token if set
+   *
+   * Used as the cache lookup key in renderFrame().
+   */
+  private _computeLinesKey(lines: Line[]): string {
+    if (lines.length === 0) return '';
+
+    const parts: string[] = [];
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      if (line.segments.length === 0) {
+        parts.push('');
+        continue;
+      }
+      const segParts: string[] = [];
+      for (let j = 0; j < line.segments.length; j++) {
+        const seg = line.segments[j];
+        let s = seg.text;
+        if (seg.style) {
+          s += '|';
+          if (seg.style.bold) s += 'b';
+          if (seg.style.dim) s += 'd';
+          if (seg.style.color) s += seg.style.color;
+        }
+        segParts.push(s);
+      }
+      parts.push(segParts.join('\t'));
+    }
+    return parts.join('\n');
   }
 }

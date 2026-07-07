@@ -59,8 +59,8 @@ import type { Theme } from './theme/index.js';
 import { getTheme } from './theme/index.js';
 import { getTerminalWidth } from './layout/width.js';
 import { cursorShow } from './utils/ansi.js';
-import { formatSize } from '../utils.js';
 import { WorkspaceLayout } from './components/workspace-layout.js';
+import { buildInfoPanelData } from './shared/info-panel-builder.js';
 import type { Analysis } from '../types.js';
 
 // ─── Type aliases for state shapes ─────────────────────────────
@@ -113,9 +113,6 @@ export class App {
   private _workspace: WorkspaceLayout | null = null;
   private _interactive: boolean = false;
   private _workspaceResolve: (() => void) | null = null;
-  private _searchActive: boolean = false;
-  private _searchBuffer: string = '';
-
   constructor(renderer: Renderer) {
     this.store = new Store(createInitialUIState());
     this.input = new InputManager();
@@ -393,6 +390,9 @@ export class App {
       collapsedPanels: state.workspace.collapsedPanels,
       infoPanelData: state.workspace.infoPanel,
       treeData: state.workspace.treeData,
+      onDirty: (id) => this.markDirty(id),
+      dirtyComponents: state.dirty.dirtyComponents,
+      fullRedraw: state.dirty.fullRedraw,
     });
 
     // Register as a frame renderer
@@ -414,8 +414,11 @@ export class App {
         treeData: ws.treeData,
         repoAnalysis: ws.repoAnalysis,
         showPalette: appState.searchFilter.paletteOpen,
+        showHelp: appState.searchFilter.helpOpen,
         onPaletteCommand: (id) => this._executePaletteCommand(id),
         searchQuery: appState.searchFilter.query,
+        dirtyComponents: appState.dirty.dirtyComponents,
+        fullRedraw: appState.dirty.fullRedraw,
       });
       const lines = this._workspace.render(this.renderer);
       return this.renderer.renderFrame(lines);
@@ -531,19 +534,26 @@ export class App {
       return;
     }
 
+    const state = this.store.getState();
+
     // When search is active in tree, intercept custom chars for filtering
-    if (this._searchActive && event.key.type === 'char' && event.key.value.length === 1) {
+    if (state.searchFilter.active && event.key.type === 'char' && event.key.value.length === 1) {
       if (event.key.value === '\x1b') {
         this._clearSearch();
         return;
       }
-      this._searchBuffer += event.key.value;
-      this._applyFilter();
+      const newQuery = state.searchFilter.query + event.key.value;
+      this.store.setState({
+        searchFilter: {
+          ...state.searchFilter,
+          query: newQuery,
+        },
+      });
       return;
     }
 
     // Handle Escape during search
-    if (this._searchActive && event.key.type === 'escape') {
+    if (state.searchFilter.active && event.key.type === 'escape') {
       this._clearSearch();
       return;
     }
@@ -637,6 +647,11 @@ export class App {
         this._workspaceResize(1);
         break;
 
+      // ── Help overlay (?) ──────────────────────────
+      case 'help':
+        this._toggleHelp();
+        break;
+
       // ── Palette (Ctrl+P) ────────────────────────────
       case 'palette':
         this._togglePalette();
@@ -652,8 +667,10 @@ export class App {
       // ── Single-letter shortcuts ───────────────────────────
       case 'custom': {
         const val = action.value;
-        if (val === '?') {
-          this._sidebarSelectView('help');
+        if (val === '?' && !state.searchFilter.helpOpen) {
+          // ? is handled by the 'help' action type — this path is for
+          // terminals that don't produce the 'question' key type
+          this._toggleHelp();
         } else if (val === 'g') {
           this._sidebarSelectView('tree');
           this._focusToRegion('tree');
@@ -667,9 +684,9 @@ export class App {
           this._focusToRegion('tree');
         } else if (val === 'b') {
           this._focusToRegion('sidebar');
-        } else if (val === 'n' && this._searchActive) {
+        } else if (val === 'n' && state.searchFilter.active) {
           this._workspace?.tree.nextMatch();
-        } else if (val === 'p' && this._searchActive) {
+        } else if (val === 'p' && state.searchFilter.active) {
           this._workspace?.tree.prevMatch();
         } else if (val === 'r') {
           this.renderLoop.requestFullRedraw();
@@ -677,6 +694,15 @@ export class App {
         // Ignore other single chars
         break;
       }
+
+      // ── Cancel (Escape) — close overlays first ─────────
+      case 'cancel':
+        if (state.searchFilter.helpOpen) {
+          this._toggleHelp();
+        } else if (state.searchFilter.paletteOpen) {
+          this._togglePalette();
+        }
+        break;
 
       // ── Quit ─────────────────────────────────────────────
       case 'quit':
@@ -943,102 +969,16 @@ export class App {
     // Build info panel data from selected tree node with real analysis data
     let infoData: InfoPanelData = ws.infoPanel;
     if (selectedNode) {
-      const metadata: { label: string; value: string }[] = [
-        { label: 'Path', value: selectedNode.path },
-        { label: 'Type', value: selectedNode.type === 'file' ? 'File' : 'Directory' },
-      ];
-      if (selectedNode.size !== undefined) {
-        metadata.push({ label: 'Size', value: formatSize(selectedNode.size) });
-      }
-      if (selectedNode.language) {
-        metadata.push({ label: 'Language', value: selectedNode.language });
-      }
-
-      // Build rich InspectorSection[] from analysis data when available
-      const sections: { title: string; items: { label: string; value: string; dim?: boolean }[] }[] = [];
-
-      if (analysis) {
-        if (selectedNode.type === 'file') {
-          // File-level details from analysis
-          const stats = analysis.stats;
-          const techMatch = analysis.technologies.find(
-            (t) => selectedNode.language && t.name.toLowerCase() === selectedNode.language!.toLowerCase()
-          );
-
-          // Summary section
-          const summaryItems: { label: string; value: string; dim?: boolean }[] = [
-            { label: 'Status', value: 'Analyzed' },
-          ];
-          if (selectedNode.size !== undefined) {
-            const pct = stats.totalSize > 0 ? ((selectedNode.size / stats.totalSize) * 100).toFixed(1) : '0';
-            summaryItems.push({ label: 'Size share', value: `${pct}%`, dim: true });
-          }
-          sections.push({ title: 'Summary', items: summaryItems });
-
-          // Details section
-          const detailItems: { label: string; value: string; dim?: boolean }[] = [
-            { label: 'Extension', value: selectedNode.name.includes('.') ? selectedNode.name.split('.').pop() || 'none' : 'none', dim: true },
-            { label: 'Total files', value: String(stats.totalFiles), dim: true },
-          ];
-          if (techMatch) {
-            detailItems.push({ label: 'Confidence', value: `${techMatch.evidence || 'detected'}`, dim: true });
-          }
-          sections.push({ title: 'Details', items: detailItems });
-        } else {
-          // Directory-level details
-          const stats = analysis.stats;
-          const techCount = analysis.technologies.length;
-          sections.push({
-            title: 'Summary',
-            items: [
-              { label: 'Status', value: 'Analyzed' },
-              { label: 'Repository', value: stats.totalFiles + ' files', dim: true },
-              { label: 'Technologies', value: String(techCount), dim: true },
-            ],
-          });
-
-          // Languages used in repo
-          const langs = analysis.technologies.filter((t) => t.category === 'language');
-          if (langs.length > 0) {
-            sections.push({
-              title: 'Languages',
-              items: langs.slice(0, 5).map((l) => ({
-                label: l.name,
-                value: l.count ? `${l.count} files` : 'detected',
-                dim: true,
-              })),
-            });
-          }
-        }
-
-        // Health score
-        const health = analysis.intelligence.health;
-        if (health && health.overall !== undefined) {
-          sections.push({
-            title: 'Health',
-            items: [
-              { label: 'Score', value: `${health.overall}/${health.maxOverall}` },
-              { label: 'Categories', value: String(health.categories.length), dim: true },
-            ],
-          });
-        }
-      }
-
-      infoData = {
-        contentType: selectedNode.type === 'file' ? 'file' : 'folder',
-        title: selectedNode.name,
-        subtitle: selectedNode.path,
-        metadata,
-        sections: sections.length > 0 ? sections : undefined,
-        description: sections.length === 0
-          ? [
-              selectedNode.type === 'file'
-                ? `File selected: ${selectedNode.name}`
-                : `Directory selected: ${selectedNode.name}`,
-            ]
-          : undefined,
-        relationships: [],
-      };
+      infoData = buildInfoPanelData(
+        {
+          name: selectedNode.name,
+          path: selectedNode.path,
+          type: selectedNode.type,
+          size: selectedNode.size,
+          language: selectedNode.language,
+        },
+        analysis,
+      );
     }
 
     this.store.setState({
@@ -1183,6 +1123,29 @@ export class App {
     }
   }
 
+  // ── Help Overlay ──────────────────────────────────────────
+
+  /** Toggle the keyboard help overlay open/closed. */
+  private _toggleHelp(): void {
+    const state = this.store.getState();
+
+    // Close palette if open when opening help
+    const wasHelpOpen = state.searchFilter.helpOpen;
+
+    this.store.setState({
+      searchFilter: {
+        ...state.searchFilter,
+        helpOpen: !wasHelpOpen,
+        paletteOpen: wasHelpOpen ? false : state.searchFilter.paletteOpen,
+      },
+      dirty: {
+        ...state.dirty,
+        fullRedraw: true,
+      },
+    });
+    this.renderLoop.requestFullRedraw();
+  }
+
   // ── Command Palette ─────────────────────────────────────────
 
   /** Toggle the command palette open/closed. */
@@ -1194,7 +1157,6 @@ export class App {
       searchFilter: {
         ...state.searchFilter,
         paletteOpen: !wasOpen,
-        paletteFilter: wasOpen ? '' : state.searchFilter.paletteFilter,
       },
       dirty: {
         ...state.dirty,
@@ -1297,8 +1259,6 @@ export class App {
 
   /** Activate incremental search mode in the tree. */
   private _activateSearch(): void {
-    this._searchActive = true;
-    this._searchBuffer = '';
     const state = this.store.getState();
     this.store.setState({
       searchFilter: {
@@ -1316,8 +1276,6 @@ export class App {
 
   /** Clear search and deactivate filter mode. */
   private _clearSearch(): void {
-    this._searchActive = false;
-    this._searchBuffer = '';
     const state = this.store.getState();
     this.store.setState({
       searchFilter: {
@@ -1332,18 +1290,6 @@ export class App {
     });
     this.renderLoop.requestFullRedraw();
   }
-
-  /** Apply the current search filter to the tree. */
-  private _applyFilter(): void {
-    const state = this.store.getState();
-    this.store.setState({
-      searchFilter: {
-        ...state.searchFilter,
-        query: this._searchBuffer,
-      },
-    });
-  }
-
 
 }
 

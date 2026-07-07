@@ -39,6 +39,8 @@ export interface FooterOptions {
   hints: KeyHintEntry[];
   /** Character for separating hints. Default: '·'. */
   separator?: string;
+  /** Whether this footer has focus. */
+  focused?: boolean;
 }
 
 // ─── Footer ────────────────────────────────────────────────────
@@ -46,11 +48,13 @@ export interface FooterOptions {
 export class Footer extends Component {
   private _hints: KeyHintEntry[];
   private _separator: string;
+  private _focused: boolean;
 
   constructor(id: string, options: FooterOptions) {
     super(id);
     this._hints = options.hints;
     this._separator = options.separator ?? '·';
+    this._focused = options.focused ?? false;
   }
 
   // ── Mutators ─────────────────────────────────────────────────
@@ -60,6 +64,17 @@ export class Footer extends Component {
    */
   setHints(hints: KeyHintEntry[]): void {
     this._hints = hints;
+    this.markDirty();
+  }
+
+  /**
+   * Update focus state.
+   */
+  setFocused(focused: boolean): void {
+    if (focused !== this._focused) {
+      this._focused = focused;
+      this.markDirty();
+    }
   }
 
   /**
@@ -69,6 +84,7 @@ export class Footer extends Component {
     const hint = this._hints.find((h) => h.key === key);
     if (hint) {
       hint.hidden = !visible;
+      this.markDirty();
     }
   }
 
@@ -86,11 +102,16 @@ export class Footer extends Component {
     }
 
     const parts = visibleHints.map((hint) => `${hint.key} ${hint.description}`);
+    const hintsText = parts.join(` ${this._separator} `);
+
+    // Focus indicator prepended when footer is focused
+    const pointerChar = this._focused ? _renderer.theme.symbol('pointer') : ' ';
 
     return [
       {
         segments: [
-          { text: parts.join(` ${this._separator} `), style: { dim: true } },
+          { text: ` ${pointerChar} `, style: this._focused ? { bold: true } : { dim: true } },
+          { text: hintsText, style: { dim: true } },
         ],
       },
     ];

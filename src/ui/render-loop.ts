@@ -65,11 +65,12 @@ export class RenderLoop {
   private _renderCallback: RenderCallback | null = null;
   private _resizeCallback: ResizeCallback | null = null;
   private _outputWriter: OutputWriter;
-  private _timer: ReturnType<typeof setInterval> | null = null;
+  private _timer: ReturnType<typeof setTimeout> | null = null;
   private _running: boolean = false;
   private _lastRenderedLines: number = 0;
   private _pendingResize: boolean = false;
   private _boundResize: (() => void) | null = null;
+  private _storeUnsub: (() => void) | null = null;
 
   /** Counter of total frames rendered (for debugging). */
   private _frameCount: number = 0;
@@ -112,8 +113,10 @@ export class RenderLoop {
   /**
    * Start the render loop.
    *
-   * The loop ticks at ~30fps but only does work when dirty components exist.
-   * Subscribes to SIGWINCH for resize events.
+   * Uses demand-driven scheduling: ticks are only scheduled when there's
+   * actual work to do (dirty components, pending resize, or full redraw).
+   * Subscribes to the Store to wake up on state changes, and to SIGWINCH
+   * for resize events.
    *
    * Safe to call multiple times — subsequent calls are no-ops.
    */
@@ -123,7 +126,7 @@ export class RenderLoop {
     this._running = true;
     this._pendingResize = false;
 
-    // Subscribe to resize events via SIGWINCH
+    // Subscribe to resize events
     this._boundResize = () => {
       this._pendingResize = true;
       this._markFullRedraw();
@@ -132,25 +135,38 @@ export class RenderLoop {
     try {
       process.stdout.on('resize', this._boundResize);
     } catch {
-      // SIGWINCH not available on all platforms
+      // Not available on all platforms
     }
 
-    // Start the tick loop
-    this._timer = setInterval(() => this._tick(), TICK_INTERVAL_MS);
+    // Subscribe to store changes and schedule a tick when work is available
+    this._storeUnsub = this._store.subscribe(() => {
+      const s = this._store.getState();
+      if (s.dirty.fullRedraw || s.dirty.dirtyComponents.size > 0 || s.dirty.layoutDirty) {
+        this._scheduleTick();
+      }
+    });
+
+    // Schedule initial tick
+    this._scheduleTick();
   }
 
   /**
    * Stop the render loop.
    *
-   * Clears the timer and removes resize listener.
-   * Safe to call multiple times.
+   * Clears any scheduled timer, removes resize listener, unsubscribes
+   * from the Store. Safe to call multiple times.
    */
   stop(): void {
     this._running = false;
 
     if (this._timer !== null) {
-      clearInterval(this._timer);
+      clearTimeout(this._timer);
       this._timer = null;
+    }
+
+    if (this._storeUnsub) {
+      this._storeUnsub();
+      this._storeUnsub = null;
     }
 
     if (this._boundResize) {
@@ -205,9 +221,25 @@ export class RenderLoop {
   // ── Internal ─────────────────────────────────────────────────
 
   /**
-   * Main tick function. Called at ~30fps.
+   * Schedule the next tick if one isn't already pending.
+   * Uses setTimeout for demand-driven scheduling.
+   */
+  private _scheduleTick(): void {
+    if (this._timer !== null) return; // Already scheduled
+    if (!this._running) return;
+    this._timer = setTimeout(() => this._tick(), TICK_INTERVAL_MS);
+  }
+
+  /**
+   * Main tick function. Runs only when scheduled (dirty state, resize,
+   * or full redraw). After completing work, checks if more work remains
+   * and re-schedules if needed.
    */
   private _tick(): void {
+    this._timer = null;
+
+    if (!this._running) return;
+
     const state = this._store.getState();
 
     // Check if resize is pending
@@ -220,7 +252,7 @@ export class RenderLoop {
 
     // Check if anything needs rendering
     if (!state.dirty.fullRedraw && state.dirty.dirtyComponents.size === 0 && !state.dirty.layoutDirty) {
-      return; // Nothing to render — skip this tick
+      return; // Nothing to render — go idle until next state change
     }
 
     // We have work to do — call the render callback
@@ -254,6 +286,13 @@ export class RenderLoop {
     this._clearDirty(state);
 
     this._frameCount++;
+
+    // After rendering, check if more work was queued during the tick.
+    // This covers rapid key events that arrive while rendering.
+    const afterState = this._store.getState();
+    if (afterState.dirty.fullRedraw || afterState.dirty.dirtyComponents.size > 0 || afterState.dirty.layoutDirty) {
+      this._scheduleTick();
+    }
   }
 
   /**

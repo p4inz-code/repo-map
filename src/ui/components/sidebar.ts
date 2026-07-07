@@ -140,12 +140,13 @@ export class NavigationSidebar extends Component {
       const paddedLabel = label.padEnd(width - 6);
 
       if (isActive) {
-        // Active section: bold + pointer + icon — high emphasis
+        // Active section: pointer + bold when focused, dimmed when blurred
+        const f = this._focused;
         lines.push({
           segments: [
-            { text: ` ${pointer} `, style: { bold: true } },
-            { text: icon, style: { bold: true } },
-            { text: ` ${paddedLabel}`, style: { bold: true } },
+            { text: ` ${f ? pointer : ' '} `, style: f ? { bold: true } : { dim: true } },
+            { text: icon, style: f ? { bold: true } : { dim: true } },
+            { text: ` ${paddedLabel}`, style: f ? { bold: true } : { dim: true } },
           ],
         });
       } else {
@@ -165,10 +166,10 @@ export class NavigationSidebar extends Component {
     // ── Helper text (only when focused) ──────────────────────
     if (this._focused) {
       lines.push({
-        segments: [{ text: ` ${arrowUp}/${arrowDown} navigate`, style: { dim: true } }],
+        segments: [{ text: ` ${arrowUp}/${arrowDown} Navigate`, style: { dim: true } }],
       });
       lines.push({
-        segments: [{ text: ' Enter  switch view', style: { dim: true } }],
+        segments: [{ text: ' Enter Switch view', style: { dim: true } }],
       });
     }
 

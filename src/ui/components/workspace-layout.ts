@@ -68,9 +68,11 @@ import type { KeyHintEntry } from './footer.js';
 import { InfoPanel } from './info-panel.js';
 import { RepositoryTree } from './repository-tree.js';
 import { CommandPalette } from './command-palette.js';
+import { KeyboardHelp } from './keyboard-help.js';
 import type { WorkspaceView, WorkspaceRegion, BreadcrumbSegment, InfoPanelData, TreeNodeData, RegionSelectionState, RegionScrollState, PanelCollapseState } from '../state/types.js';
 import { CLI_VERSION } from '../../types.js';
 import type { Analysis } from '../../types.js';
+import { buildInfoPanelData } from '../shared/info-panel-builder.js';
 
 // ─── Types ─────────────────────────────────────────────────────
 
@@ -103,12 +105,30 @@ export interface WorkspaceLayoutOptions {
   treeData: TreeNodeData | null;
   /** Whether command palette is shown. */
   showPalette?: boolean;
+  /** Whether the keyboard help overlay is shown. */
+  showHelp?: boolean;
   /** Callback when a palette command is selected. */
   onPaletteCommand?: (id: string) => void;
   /** Search filter query for tree filtering. */
   searchQuery?: string;
   /** Full analysis data for real inspector content. */
   repoAnalysis?: Analysis | null;
+  /**
+   * Callback invoked when a child component marks itself dirty.
+   * Wires Component.markDirty() into the Store's dirtyComponents set.
+   */
+  onDirty?: (id: string) => void;
+  /**
+   * Set of component IDs that need re-rendering.
+   * When non-empty and fullRedraw is false, only components whose
+   * IDs exist in this set will have render() called.
+   */
+  dirtyComponents?: Set<string>;
+  /**
+   * Whether a full re-render is needed (bypasses dirty filtering).
+   * When true, every component is rendered regardless of dirtyComponents.
+   */
+  fullRedraw?: boolean;
 }
 
 // ─── Constants ─────────────────────────────────────────────────
@@ -118,6 +138,21 @@ const INFO_PANEL_WIDTH = 30;
 
 /** Minimum width to show info panel. */
 const MIN_WIDTH_FOR_INFO = 80;
+
+// ─── Blank-line cache ───────────────────────────────────────────
+
+/** Cache of blank padding lines keyed by terminal width. */
+const _blankLineCache = new Map<number, Line>();
+
+/** Get or create a blank line of the given width. */
+function _blankLine(width: number): Line {
+  let cached = _blankLineCache.get(width);
+  if (!cached) {
+    cached = { segments: [{ text: ' '.repeat(width) }] };
+    _blankLineCache.set(width, cached);
+  }
+  return cached;
+}
 
 // ─── WorkspaceLayout ─────────────────────────────────────────
 
@@ -129,6 +164,22 @@ export class WorkspaceLayout extends Component {
   private _tree: RepositoryTree;
   private _options: WorkspaceLayoutOptions;
   private _palette: CommandPalette | null = null;
+  private _help: KeyboardHelp | null = null;
+
+  // ── Cached composed output ──────────────────────────────────────
+  /**
+   * Cached result of the last full workspace composition.
+   * When no child rendered this frame and fullRedraw is false,
+   * this cache is returned immediately, skipping all composition work.
+   */
+  private _cachedWorkspaceOutput: Line[] | null = null;
+
+  /**
+   * Tracks whether any child component executed its render() method
+   * (rather than returning cached output) during the current frame.
+   * Reset to false at the start of each renderContent() call.
+   */
+  private _anyChildRendered: boolean = false;
 
   constructor(id: string, options: WorkspaceLayoutOptions) {
     super(id);
@@ -141,6 +192,7 @@ export class WorkspaceLayout extends Component {
         height: Math.min(18, options.terminalHeight - 4),
       });
       this._palette.onCommand(options.onPaletteCommand);
+      this._wireDirtyCallback(this._palette, options);
     }
 
     const hasInfo = options.terminalWidth >= MIN_WIDTH_FOR_INFO;
@@ -151,11 +203,13 @@ export class WorkspaceLayout extends Component {
       focused: options.focusedRegion === 'sidebar',
       terminalHeight: options.terminalHeight,
     });
+    this._wireDirtyCallback(this._sidebar, options);
 
     this._breadcrumb = new BreadcrumbBar('ws-breadcrumb', {
       segments: options.breadcrumbs,
       width: options.terminalWidth - options.sidebarWidth - (hasInfo ? INFO_PANEL_WIDTH + 2 : 1),
     });
+    this._wireDirtyCallback(this._breadcrumb, options);
 
     this._infoPanel = new InfoPanel('ws-infopanel', {
       width: INFO_PANEL_WIDTH,
@@ -163,6 +217,7 @@ export class WorkspaceLayout extends Component {
       focused: options.focusedRegion === 'info',
       data: options.infoPanelData,
     });
+    this._wireDirtyCallback(this._infoPanel, options);
 
     this._tree = new RepositoryTree('ws-tree', {
       data: options.treeData,
@@ -173,9 +228,24 @@ export class WorkspaceLayout extends Component {
       selectedIndex: options.regionSelections.treeIndex,
       onSelectionChange: (path, type) => this._onTreeSelection(path, type),
     });
+    this._wireDirtyCallback(this._tree, options);
+
+    // Create help overlay if needed
+    if (options.showHelp) {
+      this._help = new KeyboardHelp('ws-help', {
+        width: Math.min(54, options.terminalWidth - 8),
+        height: Math.min(options.terminalHeight - 4, 30),
+      });
+      this._wireDirtyCallback(this._help, options);
+    }
 
     const hints = this._buildHints(options);
-    this._footer = new Footer('ws-footer', { hints, separator: '·' });
+    this._footer = new Footer('ws-footer', {
+      hints,
+      separator: '·',
+      focused: options.focusedRegion === 'footer',
+    });
+    this._wireDirtyCallback(this._footer, options);
   }
 
   // ── Region Accessors ───────────────────────────────────────
@@ -206,27 +276,39 @@ export class WorkspaceLayout extends Component {
   setOptions(options: Partial<WorkspaceLayoutOptions>): void {
     let needsRebuild = false;
 
+    // Snapshot old overlay state BEFORE Object.assign overwrites them
+    // (used below to detect actual toggle events vs. same-value re-passing)
+    const prevShowPalette = this._options.showPalette;
+    const prevShowHelp = this._options.showHelp;
+
     // Update options
     Object.assign(this._options, options);
 
     // Propagate to child components
+    let contentChanged = false;
+
     if (options.activeView !== undefined) {
       this._sidebar.setActiveView(options.activeView);
+      contentChanged = true;
       needsRebuild = true;
     }
     if (options.focusedRegion !== undefined) {
       this._sidebar.setFocused(options.focusedRegion === 'sidebar');
       this._infoPanel.setFocused(options.focusedRegion === 'info');
       this._tree.setFocused(options.focusedRegion === 'tree');
+      contentChanged = true;
       needsRebuild = true;
     }
     if (options.breadcrumbs !== undefined) {
       this._breadcrumb.setSegments(options.breadcrumbs);
+      contentChanged = true;
     }
     if (options.sidebarWidth !== undefined) {
+      contentChanged = true;
       needsRebuild = true;
     }
     if (options.terminalWidth !== undefined) {
+      contentChanged = true;
       needsRebuild = true;
       const hasInfo = options.terminalWidth >= MIN_WIDTH_FOR_INFO;
       this._breadcrumb.setWidth(
@@ -235,32 +317,42 @@ export class WorkspaceLayout extends Component {
     }
     if (options.terminalHeight !== undefined) {
       this._sidebar.setTerminalHeight(options.terminalHeight);
+      contentChanged = true;
       needsRebuild = true;
     }
     if (options.selectedItem !== undefined) {
-      // Just a label update
+      // Just a label update on the status line — still affects output
+      contentChanged = true;
     }
     if (options.regionSelections !== undefined) {
       this._tree.setSelectedIndex(options.regionSelections.treeIndex);
+      contentChanged = true;
     }
     if (options.regionScroll !== undefined) {
       this._tree.setScrollOffset(options.regionScroll.treeOffset);
+      contentChanged = true;
     }
     if (options.infoPanelData !== undefined) {
       this._infoPanel.setData(options.infoPanelData);
+      contentChanged = true;
     }
     if (options.treeData !== undefined) {
       this._tree.setData(options.treeData);
+      contentChanged = true;
     }
     if (options.collapsedPanels !== undefined) {
       this._options.collapsedPanels = options.collapsedPanels;
+      contentChanged = true;
       needsRebuild = true;
     }
 
-    // Handle palette toggle
-    if (options.showPalette !== undefined) {
+    // Handle palette toggle — only process when the value actually changes
+    if (options.showPalette !== undefined && options.showPalette !== prevShowPalette) {
       this._options.showPalette = options.showPalette;
+      contentChanged = true;
       needsRebuild = true;
+      // Invalidate workspace cache — overlay state changes the entire output
+      this._cachedWorkspaceOutput = null;
 
       // Create or destroy palette
       if (options.showPalette && !this._palette && options.onPaletteCommand) {
@@ -269,14 +361,35 @@ export class WorkspaceLayout extends Component {
           height: Math.min(18, this._options.terminalHeight - 4),
         });
         this._palette.onCommand(options.onPaletteCommand);
+        this._wireDirtyCallback(this._palette, this._options);
       } else if (!options.showPalette) {
         this._palette = null;
+      }
+    }
+
+    // Handle help overlay toggle — only process when the value actually changes
+    if (options.showHelp !== undefined && options.showHelp !== prevShowHelp) {
+      this._options.showHelp = options.showHelp;
+      contentChanged = true;
+      needsRebuild = true;
+      // Invalidate workspace cache — overlay state changes the entire output
+      this._cachedWorkspaceOutput = null;
+
+      if (options.showHelp) {
+        this._help = new KeyboardHelp('ws-help', {
+          width: Math.min(54, this._options.terminalWidth - 8),
+          height: Math.min(this._options.terminalHeight - 4, 30),
+        });
+        this._wireDirtyCallback(this._help, this._options);
+      } else {
+        this._help = null;
       }
     }
 
     // Handle search query for tree filtering
     if (options.searchQuery !== undefined) {
       this._options.searchQuery = options.searchQuery;
+      contentChanged = true;
       // Filter tree visible nodes
       const treeData = this._options.treeData;
       if (treeData && options.searchQuery) {
@@ -297,6 +410,11 @@ export class WorkspaceLayout extends Component {
       this._footer.setHints(this._buildHints(this._options));
 
       this.markDirty();
+    } else if (contentChanged) {
+      // Non-structural content change (e.g., info panel data, breadcrumbs,
+      // tree selection). The layout composition must be re-evaluated so
+      // the final frame includes updated child output.
+      this.markDirty();
     }
   }
 
@@ -307,16 +425,29 @@ export class WorkspaceLayout extends Component {
   }
 
   protected renderContent(renderer: Renderer): Line[] {
+    // Reset frame-level child-rendered tracker
+    this._anyChildRendered = false;
+
     if (!this._options.active) {
-      // Inactive state
+      // Inactive state — clear cache
+      this._cachedWorkspaceOutput = null;
       return [{
         segments: [{ text: 'Workspace is not active. Run an analysis first.' }],
       }];
     }
 
+    // If keyboard help is active, render it as an overlay (highest priority)
+    if (this._help && this._options.showHelp) {
+      const helpLines = this._help.render(renderer);
+      this._cachedWorkspaceOutput = helpLines;
+      return helpLines;
+    }
+
     // If command palette is active, render it as an overlay
     if (this._palette && this._options.showPalette) {
-      return this._palette.render(renderer);
+      const paletteLines = this._palette.render(renderer);
+      this._cachedWorkspaceOutput = paletteLines;
+      return paletteLines;
     }
 
     const tw = this._options.terminalWidth;
@@ -325,11 +456,37 @@ export class WorkspaceLayout extends Component {
     const hasInfo = tw >= MIN_WIDTH_FOR_INFO;
     const iw = hasInfo ? INFO_PANEL_WIDTH : 0;
     const mw = tw - sw - (hasInfo ? iw + 2 : 1); // Main content width
-    const lines: Line[] = [];
-    const sep = renderer.theme.symbol('separator');
+    const contentHeight = th - 5; // header(2) + breadcrumb(1) + status(1) + footer(1)
     const focusedRegion = this._options.focusedRegion;
 
-    // ── Header (1 line) ────────────────────────────────────
+    // ── Phase 1: Render ALL children (collect raw output) ──────
+    const sidebarLines = this._renderChildIfDirty(this._sidebar, renderer);
+    const mainContent = this._renderMainContent(renderer, mw, contentHeight);
+    const infoLines = hasInfo ? this._renderChildIfDirty(this._infoPanel, renderer) : [];
+    this._footer.setFocused(focusedRegion === 'footer');
+    const footerLines = this._renderChildIfDirty(this._footer, renderer);
+    const breadcrumbLines = this._renderChildIfDirty(this._breadcrumb, renderer);
+
+    // ── Cache check ─────────────────────────────────────────
+    // If no child actually executed render() this frame (all were
+    // clean and returned cached output), and we have a previously
+    // cached workspace composition, return it immediately to skip
+    // all ANSI conversion and column-joining work.
+    //
+    // fullRedraw bypasses the cache.
+    if (
+      !this._anyChildRendered &&
+      !this._options.fullRedraw &&
+      this._cachedWorkspaceOutput !== null
+    ) {
+      return this._cachedWorkspaceOutput;
+    }
+
+    // ── Phase 2: Compose the full workspace frame ─────────────
+    const lines: Line[] = [];
+    const sep = renderer.theme.symbol('separator');
+
+    // Header (1 line)
     const headerText = 'repo-map — Interactive Workspace';
     const versionText = `v${CLI_VERSION}`;
     const headerPad = Math.max(1, tw - headerText.length - versionText.length);
@@ -345,58 +502,37 @@ export class WorkspaceLayout extends Component {
       segments: [{ text: sep.repeat(tw), style: { dim: true } }],
     });
 
-    // ── Content area ──────────────────────────────────────
-    const contentHeight = th - 5; // header(2) + breadcrumb(1) + status(1) + footer(1)
+    // Batch-render each column into ANSI strings, then combine side by side
+    const sidebarRendered = renderer.renderFrame(sidebarLines);
+    const mainRendered = renderer.renderFrame(mainContent);
+    const infoRendered = hasInfo ? renderer.renderFrame(infoLines) : [];
 
-    // Render sidebar
-    const sidebarLines = this._sidebar.render(renderer);
-
-    // Render main content based on active view
-    const mainContent = this._renderMainContent(renderer, mw, contentHeight);
-
-    // Render info panel
-    const infoLines = hasInfo ? this._infoPanel.render(renderer) : [];
-
-    // Combine all three columns side by side
-    const maxLines = Math.max(sidebarLines.length, mainContent.length, infoLines.length);
-    const maxContentLines = Math.min(maxLines, contentHeight);
+    const maxContentLines = Math.min(
+      Math.max(sidebarRendered.length, mainRendered.length, infoRendered.length),
+      contentHeight,
+    );
 
     for (let i = 0; i < maxContentLines && lines.length < th - 3; i++) {
-      const sidebarText = i < sidebarLines.length
-        ? renderer.renderFrame([sidebarLines[i]])[0] || ''
-        : '';
+      const sidebarText = i < sidebarRendered.length ? sidebarRendered[i] : '';
+      const mainText = i < mainRendered.length ? mainRendered[i] : '';
+      const infoText = i < infoRendered.length ? infoRendered[i] : '';
 
-      const mainText = i < mainContent.length
-        ? renderer.renderFrame([mainContent[i]])[0] || ''
-        : '';
+      const combined = hasInfo
+        ? sidebarText + '│' + mainText + '│' + infoText
+        : sidebarText + '│' + mainText;
 
-      const infoText = hasInfo && i < infoLines.length
-        ? renderer.renderFrame([infoLines[i]])[0] || ''
-        : '';
-
-      let combined: string;
-      if (hasInfo) {
-        combined = sidebarText + '│' + mainText + '│' + infoText;
-      } else {
-        combined = sidebarText + '│' + mainText;
-      }
-
-      lines.push({
-        segments: [{ text: combined }],
-      });
+      lines.push({ segments: [{ text: combined }] });
     }
 
-    // Fill any remaining content lines
+    // Fill any remaining content lines using cached blank lines
     const currentContentLines = lines.length;
     const headerLines = 2; // header + divider
+    const blankPad = _blankLine(tw);
     for (let i = currentContentLines; i < headerLines + contentHeight; i++) {
-      lines.push({
-        segments: [{ text: ' '.repeat(tw) }],
-      });
+      lines.push(blankPad);
     }
 
-    // ── Breadcrumb bar ─────────────────────────────────────
-    const breadcrumbLines = this._breadcrumb.render(renderer);
+    // Breadcrumb
     lines.push(...breadcrumbLines);
 
     // ── Status line — view icon, focused region, repo summary, filter/search indicators ──
@@ -404,10 +540,17 @@ export class WorkspaceLayout extends Component {
     const viewIcon = this._viewIcon(this._options.activeView, renderer);
     const focusLabel = this._regionFocusLabel(focusedRegion);
     const sepBullet = renderer.theme.symbol('bullet');
-    const searchIcon = renderer.theme.symbol('search');
 
     // Build left portion: icon + view name + focus
     let leftStatus = ` ${viewIcon} ${viewLabel} ${sepBullet} ${focusLabel}`;
+
+    // Add tree position indicator when tree is focused
+    if (focusedRegion === 'tree' && this._options.activeView === 'tree') {
+      const pos = this._tree.positionLabel;
+      if (pos) {
+        leftStatus += ` ${sepBullet} ${pos}`;
+      }
+    }
 
     // Add active filter indicator
     if (this._options.searchQuery) {
@@ -442,14 +585,10 @@ export class WorkspaceLayout extends Component {
     if (selectionStr) rightParts.push(selectionStr);
     const rightStr = rightParts.join(` ${sepBullet} `);
 
-    // Search active indicator (only when a non-empty filter is active)
-    const hasActiveFilter = this._options.searchQuery && this._options.searchQuery.length > 0;
-    const searchIndicator = hasActiveFilter ? ` ${searchIcon}` : '';
-
     const padLen = tw - leftStatus.length - (rightStr ? rightStr.length + 2 : 0);
     const statusLine = padLen > 0
-      ? leftStatus + ' '.repeat(padLen) + (rightStr ? ` ${sepBullet} ${rightStr}` : '') + searchIndicator
-      : leftStatus + searchIndicator;
+      ? leftStatus + ' '.repeat(padLen) + (rightStr ? ` ${sepBullet} ${rightStr}` : '')
+      : leftStatus;
 
     lines.push({
       segments: [
@@ -457,10 +596,11 @@ export class WorkspaceLayout extends Component {
       ],
     });
 
-    // ── Footer ─────────────────────────────────────────────
-    const footerLines = this._footer.render(renderer);
+    // Footer
     lines.push(...footerLines);
 
+    // Cache composed output for next frame
+    this._cachedWorkspaceOutput = lines;
     return lines;
   }
 
@@ -481,7 +621,8 @@ export class WorkspaceLayout extends Component {
       case 'tree': {
         // Update tree focus state
         this._tree.setFocused(isFocused);
-        return this._tree.render(renderer);
+        // Conditional: only render if dirty
+        return this._renderChildIfDirty(this._tree, renderer);
       }
       case 'help':
         return this._renderHelpContent(renderer, width, height);
@@ -503,7 +644,7 @@ export class WorkspaceLayout extends Component {
 
     lines.push({
       segments: [
-        { text: ` ${focusPointer} Overview`, style: isFocused ? { bold: true } : {} },
+        { text: ` ${focusPointer} Overview`, style: isFocused ? { bold: true } : { dim: true } },
       ],
     });
     lines.push(blank());
@@ -559,7 +700,7 @@ export class WorkspaceLayout extends Component {
     // Main header
     lines.push({
       segments: [
-        { text: ` ${isFocused ? renderer.theme.symbol('pointer') : ' '} ${statsIcon}  Statistics`, style: isFocused ? { bold: true } : {} },
+        { text: ` ${isFocused ? renderer.theme.symbol('pointer') : ' '} ${statsIcon}  Statistics`, style: isFocused ? { bold: true } : { dim: true } },
       ],
     });
     lines.push(blank());
@@ -615,7 +756,7 @@ export class WorkspaceLayout extends Component {
 
     lines.push({
       segments: [
-        { text: ` ${isFocused ? renderer.theme.symbol('pointer') : ' '} ${infoIcon}  Suggestions`, style: isFocused ? { bold: true } : {} },
+        { text: ` ${isFocused ? renderer.theme.symbol('pointer') : ' '} ${infoIcon}  Suggestions`, style: isFocused ? { bold: true } : { dim: true } },
       ],
     });
     lines.push(blank());
@@ -667,7 +808,7 @@ export class WorkspaceLayout extends Component {
 
     lines.push({
       segments: [
-        { text: ` ${pointer} ${searchIcon}  Help`, style: isFocused ? { bold: true } : {} },
+        { text: ` ${pointer} ${searchIcon}  Help`, style: isFocused ? { bold: true } : { dim: true } },
       ],
     });
     lines.push(blank());
@@ -706,66 +847,73 @@ export class WorkspaceLayout extends Component {
 
   /** Handle tree node selection → update info panel with analysis data when available. */
   private _onTreeSelection(path: string, type: 'file' | 'directory'): void {
-    const analysis = this._options.repoAnalysis;
-    const sections: { title: string; items: { label: string; value: string; dim?: boolean }[] }[] = [];
+    const analysis = this._options.repoAnalysis ?? null;
+    const name = path.split(/[/\\]/).pop() || path;
 
-    if (analysis) {
-      // Build rich sections from real analysis data
-      const stats = analysis.stats;
-      const techCount = analysis.technologies.length;
-
-      if (type === 'file') {
-        sections.push({ title: 'Summary', items: [{ label: 'Status', value: 'Analyzed' }] });
-        sections.push({
-          title: 'Details',
-          items: [
-            { label: 'Total files', value: String(stats.totalFiles), dim: true },
-            { label: 'Technologies', value: String(techCount), dim: true },
-          ],
-        });
-      } else {
-        sections.push({
-          title: 'Summary',
-          items: [
-            { label: 'Status', value: 'Analyzed' },
-            { label: 'Repository', value: `${stats.totalFiles} files`, dim: true },
-          ],
-        });
-      }
-
-      // Share health score
-      const health = analysis.intelligence.health;
-      if (health?.overall !== undefined) {
-        sections.push({
-          title: 'Health',
-          items: [{ label: 'Score', value: `${health.overall}/${health.maxOverall}` }],
-        });
-      }
-    }
-
-    const infoData: InfoPanelData = {
-      contentType: type === 'file' ? 'file' : 'folder',
-      title: path.split('/').pop() || path,
-      subtitle: path,
-      metadata: [
-        { label: 'Path', value: path },
-        { label: 'Type', value: type === 'file' ? 'File' : 'Directory' },
-      ],
-      sections: sections.length > 0 ? sections : undefined,
-      description: sections.length === 0
-        ? [
-            type === 'file'
-              ? `Selected file: ${path}`
-              : `Selected directory: ${path}`,
-          ]
-        : undefined,
-      relationships: [],
-    };
+    const infoData = buildInfoPanelData(
+      { name, path, type },
+      analysis,
+    );
 
     this._options.infoPanelData = infoData;
     this._options.selectedItem = path;
     this._infoPanel.setData(infoData);
     this.markDirty();
+  }
+
+  // ── Internal: Dirty callback wiring ────────────────────────────
+
+  /**
+   * Wire a child component's dirty callback to the parent's onDirty handler.
+   * This ensures Component.markDirty() propagates to the Store's
+   * dirtyComponents set.
+   */
+  private _wireDirtyCallback(component: Component, options: WorkspaceLayoutOptions): void {
+    if (options.onDirty) {
+      component.setDirtyCallback(options.onDirty);
+    }
+  }
+
+  // ── Internal: Conditional child rendering ───────────────────────
+
+  /**
+   * Conditionally render a child component based on dirty state.
+   *
+   * If fullRedraw is true, or the component's ID is in dirtyComponents,
+   * or the component itself reports isDirty, then render() is called to
+   * produce fresh output.
+   *
+   * Otherwise, the component's previously cached rendered output is reused
+   * via getCachedLines(), falling back to a fresh render() if no cache
+   * exists yet.
+   *
+   * This is the core of component-aware rendering selection: only dirty
+   * components execute their renderContent(); clean components skip the
+   * call entirely and reuse their last output.
+   *
+   * @param component - The child component to render.
+   * @param renderer - The Renderer for ANSI style resolution.
+   * @returns Rendered lines (fresh or cached).
+   */
+  private _renderChildIfDirty(component: Component, renderer: Renderer): Line[] {
+    const dirtyComponents = this._options.dirtyComponents;
+    const fullRedraw = this._options.fullRedraw;
+
+    if (fullRedraw || (dirtyComponents && dirtyComponents.has(component.id)) || component.isDirty) {
+      // Child actually needs rendering — track that a child rendered this frame
+      this._anyChildRendered = true;
+      return component.render(renderer);
+    }
+
+    // Component is clean — reuse cached output if available
+    const cached = component.getCachedLines();
+    if (cached !== null) {
+      return cached;
+    }
+
+    // No cache exists yet (first render) — fall back to fresh render
+    this._anyChildRendered = true;
+    return component.render(renderer);
   }
 
   // ── Internal: Helpers ────────────────────────────────────────
@@ -778,12 +926,12 @@ export class WorkspaceLayout extends Component {
 
     switch (region) {
       case 'sidebar':
-        hints.push({ key: '↑↓', description: 'Navigate' });
-        hints.push({ key: 'Enter', description: 'Select view' });
+        hints.push({ key: '↑↓', description: 'Select' });
+        hints.push({ key: 'Enter', description: 'Open' });
         break;
       case 'tree':
         hints.push({ key: '↑↓', description: 'Navigate' });
-        hints.push({ key: '←→', description: 'Collapse/Expand' });
+        hints.push({ key: '←→', description: 'Expand/Collapse' });
         hints.push({ key: 'Enter', description: 'Toggle' });
         if (view === 'tree') {
           hints.push({ key: '/', description: 'Filter' });
@@ -793,12 +941,21 @@ export class WorkspaceLayout extends Component {
         hints.push({ key: '↑↓', description: 'Scroll' });
         break;
       case 'footer':
+        hints.push({ key: 'Tab', description: 'Cycle focus' });
         break;
     }
 
-    // Global hints (always shown)
-    hints.push({ key: 'Tab', description: 'Focus next' });
+    // Commands palette (available everywhere)
     hints.push({ key: '⌘P', description: 'Commands' });
+
+    // Tab cycling hint (skip when footer has its own Tab hint to avoid redundancy)
+    if (region !== 'footer') {
+      hints.push({ key: 'Tab', description: 'Focus next' });
+    }
+
+    // Keyboard shortcuts reference — displayed when not already on help overlay
+    hints.push({ key: '?', description: 'Keyboard shortcuts' });
+
     hints.push({ key: 'q', description: 'Quit' });
 
     return hints;

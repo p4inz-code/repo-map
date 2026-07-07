@@ -24,6 +24,7 @@ import { Component, blank } from './component.js';
 import type { Renderer, Line } from '../renderer.js';
 import type { InfoPanelData, InfoContentType } from '../state/types.js';
 import type { ColorToken } from '../theme/index.js';
+import { renderScoreBar } from '../shared/score-bar.js';
 
 // ─── Types ─────────────────────────────────────────────────────
 
@@ -250,13 +251,14 @@ export class InfoPanel extends Component {
     // ── Score bar (compact, single line) ───────────────────────
     if (score !== undefined) {
       const barWidth = Math.min(this._width - 8, 16);
-      const filled = Math.round((Math.max(0, Math.min(score, 100)) / 100) * barWidth);
-      const empty = barWidth - filled;
+      const { filled, empty } = renderScoreBar(score, barWidth);
+      const filledChar = renderer.theme.symbol('filled');
+      const emptyChar = renderer.theme.symbol('empty');
       lines.push({
         segments: [
           { text: '   Score ', style: { bold: true } },
-          { text: '█'.repeat(filled), style: { color: this._scoreColor(score) } },
-          { text: '░'.repeat(empty), style: { dim: true } },
+          { text: filledChar.repeat(filled), style: { color: this._scoreColor(score) } },
+          { text: emptyChar.repeat(empty), style: { dim: true } },
           { text: ` ${score}/100`, style: { dim: true } },
         ],
       });
@@ -359,13 +361,14 @@ export class InfoPanel extends Component {
     if (this._data.score !== undefined) {
       const score = this._data.score;
       const barWidth = Math.min(this._width - 8, 16);
-      const filled = Math.round((Math.max(0, Math.min(score, 100)) / 100) * barWidth);
-      const empty = barWidth - filled;
+      const { filled, empty } = renderScoreBar(score, barWidth);
+      const filledChar = renderer.theme.symbol('filled');
+      const emptyChar = renderer.theme.symbol('empty');
       lines.push({
         segments: [
           { text: '   Score ', style: { bold: true } },
-          { text: '█'.repeat(filled), style: { color: this._scoreColor(score) } },
-          { text: '░'.repeat(empty), style: { dim: true } },
+          { text: filledChar.repeat(filled), style: { color: this._scoreColor(score) } },
+          { text: emptyChar.repeat(empty), style: { dim: true } },
           { text: ` ${score}/100`, style: { dim: true } },
         ],
       });

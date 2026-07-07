@@ -41,6 +41,12 @@ export abstract class Component {
   private _cachedLines: Line[] | null = null;
 
   /**
+   * Optional callback invoked when this component marks itself dirty.
+   * Used to register the component ID in the Store's dirtyComponents set.
+   */
+  private _dirtyCallback: ((id: string) => void) | null = null;
+
+  /**
    * @param id - Unique identifier for this component instance.
    */
   constructor(id: string) {
@@ -83,10 +89,13 @@ export abstract class Component {
 
   /**
    * Mark this component as dirty, requiring re-render on next frame.
+   * Also records this component's ID in the Store via the dirty callback,
+   * enabling the RenderLoop to track which components need rendering.
    */
   markDirty(): void {
     this._dirty = true;
     this._cachedLines = null;
+    this._dirtyCallback?.(this.id);
   }
 
   /**
@@ -94,6 +103,32 @@ export abstract class Component {
    */
   get isDirty(): boolean {
     return this._dirty;
+  }
+
+  /**
+   * Register a callback that fires when this component marks itself dirty.
+   * The callback receives the component's ID, which the Store uses to
+   * track which components need re-rendering.
+   *
+   * @param callback - Fired with this.id on every markDirty() call, or null to detach.
+   */
+  setDirtyCallback(callback: ((id: string) => void) | null): void {
+    this._dirtyCallback = callback;
+  }
+
+  /**
+   * Get cached rendered lines without triggering a render.
+   * Returns null if the component has never been rendered or has been
+   * marked dirty since its last render.
+   *
+   * Used by parent components to reuse previous rendered output when
+   * a child component has not changed (dirty-component rendering).
+   */
+  getCachedLines(): Line[] | null {
+    if (this._cachedLines === null) {
+      return null;
+    }
+    return this._cachedLines;
   }
 
   /**

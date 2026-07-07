@@ -260,6 +260,29 @@ export class ScrollableList extends Component {
       lines.push({ segments } as Line);
     }
 
+    // ── Scrollbar ──────────────────────────────────────────────
+    // Only show when content exceeds viewport
+    if (this._items.length > this._visibleItems) {
+      const filled = _renderer.theme.symbol('filled');
+      const empty = _renderer.theme.symbol('empty');
+      const maxOff = this._items.length - this._visibleItems;
+      const scrollOff = this._computeScrollOffset();
+      const thumbSize = Math.max(1, Math.round(this._visibleItems * (this._visibleItems / this._items.length)));
+      const thumbPos = scrollOff > 0
+        ? Math.round((scrollOff / maxOff) * (this._visibleItems - thumbSize))
+        : 0;
+
+      for (let i = 0; i < lines.length; i++) {
+        const isThumb = i >= thumbPos && i < thumbPos + thumbSize;
+        const char = isThumb ? filled : empty;
+        const existing = lines[i];
+        if (existing && existing.segments.length > 0) {
+          const last = existing.segments[existing.segments.length - 1];
+          last.text += char;
+        }
+      }
+    }
+
     return lines;
   }
 

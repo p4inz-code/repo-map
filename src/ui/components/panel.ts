@@ -49,14 +49,6 @@ export interface PanelOptions {
   borderless?: boolean;
 }
 
-// ─── Global collapsed state ─────────────────────────────────────
-
-/**
- * Global store of collapsed states, keyed by panel ID.
- * Persists across re-renders so expand/collapse state is remembered.
- */
-const _collapsedState = new Map<string, boolean>();
-
 // ─── Panel ─────────────────────────────────────────────────────
 
 export class Panel extends Component {
@@ -79,17 +71,9 @@ export class Panel extends Component {
     this._borderless = options.borderless ?? false;
     this._border = options.border;
 
-    // Restore or set collapsed state
-    if (this._collapsible) {
-      if (_collapsedState.has(id)) {
-        this._collapsed = _collapsedState.get(id)!;
-      } else {
-        this._collapsed = options.collapsed ?? false;
-        _collapsedState.set(id, this._collapsed);
-      }
-    } else {
-      this._collapsed = false;
-    }
+    // Collapsed state comes from the passed option only.
+    // The Store's workspace.collapsedPanels is the single source of truth.
+    this._collapsed = options.collapsible ? (options.collapsed ?? false) : false;
   }
 
   // ── Builder API ──────────────────────────────────────────────
@@ -177,7 +161,6 @@ export class Panel extends Component {
   toggleCollapse(): void {
     if (!this._collapsible) return;
     this._collapsed = !this._collapsed;
-    _collapsedState.set(this.id, this._collapsed);
     this.markDirty();
   }
 
@@ -187,7 +170,6 @@ export class Panel extends Component {
   expand(): void {
     if (!this._collapsible || !this._collapsed) return;
     this._collapsed = false;
-    _collapsedState.set(this.id, false);
     this.markDirty();
   }
 
@@ -197,7 +179,6 @@ export class Panel extends Component {
   collapse(): void {
     if (!this._collapsible || this._collapsed) return;
     this._collapsed = true;
-    _collapsedState.set(this.id, true);
     this.markDirty();
   }
 

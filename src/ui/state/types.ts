@@ -118,8 +118,8 @@ export interface SearchFilterState {
   query: string;
   /** Whether the command palette is open. */
   paletteOpen: boolean;
-  /** Command palette filter text. */
-  paletteFilter: string;
+  /** Whether the keyboard help overlay is open. */
+  helpOpen: boolean;
 }
 
 // ─── Inspector Sections ────────────────────────────────────────
@@ -399,7 +399,7 @@ export function createInitialUIState(): UIState {
       active: false,
       query: '',
       paletteOpen: false,
-      paletteFilter: '',
+      helpOpen: false,
     },
     workspace: {
       activeView: 'overview',

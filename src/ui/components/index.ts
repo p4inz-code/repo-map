@@ -29,7 +29,6 @@ export type { WorkspaceLayoutOptions } from './workspace-layout.js';
 export { WorkspaceLayout } from './workspace-layout.js';
 export type { SelectionOptions } from './selection.js';
 export { Selection } from './selection.js';
-export { FocusState } from './focus-state.js';
 export type { InfoPanelOptions } from './info-panel.js';
 export { InfoPanel } from './info-panel.js';
 export type { RepositoryTreeOptions } from './repository-tree.js';
