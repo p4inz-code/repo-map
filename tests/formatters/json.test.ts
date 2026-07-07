@@ -50,7 +50,7 @@ describe('formatJson', () => {
     expect(parsed.schemaVersion).toBe('1.0.0');
     expect(parsed.projectName).toBe('test-project');
     expect(parsed.generatedAt).toBe('2025-01-01T00:00:00.000Z');
-    expect(parsed.cliVersion).toBe('2.2.4');
+    expect(parsed.cliVersion).toBe('2.2.7');
     expect(parsed.stats).toBeDefined();
     expect(parsed.technologies).toHaveLength(1);
     expect(parsed.tree).toBeDefined();
