@@ -5,6 +5,50 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.0.0] - 2026-07-07
+
+### Added
+
+- **V3 Runtime Layer** — New deterministic frame pipeline (FrameBuilder → LayerComposer → DoubleBuffer → DiffEngine)
+- **Command Palette (Ctrl+K)** — Raycast-inspired palette with fuzzy search, recent commands, pinned favorites
+- **Incremental Search (Ctrl+F)** — Live filtering with match highlighting, scroll-to-result, history preservation
+- **Smooth Scrolling** — PageUp/PageDown/Home/End with eased interpolation, scrollbar fade, edge shadows
+- **Cinematic Startup Sequence** — Animated logo reveal, progressive workspace reveal, reduced-motion support
+- **Context-Aware Keyboard Hints** — Dynamic status bar hints that update based on current screen, palette, and search state
+- **Accessibility Manager** — Reduced motion mode (changes duration, not lifecycle), high contrast, no-color support
+- **Overlay Manager** — Stack-based overlay system with focus routing, dismiss strategies, modal support
+- **Sidebar Motion** — Gliding selection animation with eased transitions
+- **MicroInteractions** — Cursor pulses, panel transitions, subtle animations
+- **Animation Scheduler** — Enhanced frame-based scheduler with pause/resume/cancel/reverse
+- **EventBus** — Strongly typed pub/sub event system for decoupled component communication
+- **WorkspaceManager** — Centralized workspace state with observable changes
+- **FocusTree** — Hierarchical focus system for keyboard navigation
+- **TransitionManager** — Screen-to-screen transition orchestration
+- **ExportManager** — Multi-format export workflow with progress tracking
+- **TaskManager** — Background task orchestration with priority queuing
+- **NotificationSystem** — Queued notifications with severity levels and auto-dismiss
+- **LoadingManager** — Informative loading states with progress tracking
+
+### Changed
+
+- **Internal architecture** — Complete migration from V1/V2 render pipelines to V3 RuntimeManager
+- **Keyboard bindings** — Ctrl+K opens palette, Ctrl+F opens search, PageUp/PageDown scroll smoothly
+- **Version bumped to 3.0.0** — Major version reflecting complete runtime rewrite
+- **CLI_VERSION synchronized** — All version strings now reference the canonical `CLI_VERSION` constant
+- **870+ automated tests** — Expanded test coverage for new V3 systems
+
+### Fixed
+
+- PageUp/PageDown/Home/End now use ScrollingEngine instead of placeholder `markDirty()` calls
+- Reduced motion no longer prevents startup lifecycle (only affects duration/easing)
+- Startup reveal always executes regardless of accessibility settings
+- Removed unused `renderSearchBar` import
+- Fixed version string consistency across `about.ts`, `controller.ts`, and test assertions
+
+### Documentation
+
+- README updated with v3.0.0 features, screenshots, and CLI reference
+
 ## [2.2.2] - 2026-07-06
 
 ### Added

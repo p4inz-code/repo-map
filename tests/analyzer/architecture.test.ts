@@ -33,7 +33,7 @@ describe('generateArchitecture', () => {
     totalDirectories: 3,
     totalSize: 10240,
     generatedAt: '2026-06-24T12:00:00.000Z',
-    cliVersion: '2.2.4',
+    cliVersion: '3.0.0',
     tree: 'src/\n├── index.ts\n└── cli.ts\n',
     stats: {
       totalFiles: 10,

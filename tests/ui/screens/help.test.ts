@@ -128,7 +128,7 @@ describe('renderHelp', () => {
   it('renders narrow layout with compact options on narrow terminals', () => {
     const narrowWidth = makeWidthInfo({ columns: 50, contentWidth: 46, isNarrow: true, breakpoint: 'compact' });
     const narrowRenderer = new Renderer(makeMockTheme(), narrowWidth);
-    renderHelp(narrowRenderer, '2.2.4');
+    renderHelp(narrowRenderer, '3.0.0');
     const output = stderrSpy.mock.calls.map((c) => c[0] as string).join('');
     // Should still contain all sections
     expect(output).toContain('repo-map');
@@ -138,6 +138,6 @@ describe('renderHelp', () => {
     // Narrow mode uses compact option descriptions
     expect(output).toContain('JSON output');
     expect(output).toContain('Write to file');
-    expect(output).toContain('v2.2.4');
+    expect(output).toContain('v3.0.0');
   });
 });

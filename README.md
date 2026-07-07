@@ -80,19 +80,18 @@ Run `repo-map --help` for full documentation.
 
 ---
 
-## What's New in v2.2
+## What's New in v3.0
 
-- **Interactive workspace** — `--interactive` launches a navigable TUI with sidebar, repository tree, info panel, and keyboard shortcuts
-- **Tree output** — `--tree` displays the directory tree on its own
-- **Dashboard redesign** — Classification-first layout with health bar and 20-character label alignment
-- **Suggestions screen** — `--suggest` command with prioritized recommendations (high/medium/low)
-- **Health scoring** — 8-dimension assessment (documentation, testing, consistency, tooling) with composite 0–100 score
-- **Project intelligence** — Automatic classification, maturity estimation, and technology detection
-- **Architecture analysis** — Dependency graphs, coupling, cohesion, circular dependencies, layer violations, complexity scoring, and risk reports
-- **Narrow terminal support** — Graceful degradation below 60 columns (text-only layout)
-- **Color tokens** — 4 semantic colors across 16-color, 256-color, and TrueColor modes
-- **Theme presets** — Default, monochrome, high-contrast, and minimal
-- **862+ automated tests** — Coverage across all screens, animations, themes, and edge cases
+- **Complete V3 Runtime rewrite** — New deterministic frame pipeline with AnimationScheduler, ScrollingEngine, DoubleBuffer, and DiffEngine
+- **Cinematic startup sequence** — Animated logo reveal, progressive workspace reveal, reduced-motion support
+- **Command Palette (Ctrl+K)** — Raycast-inspired palette with fuzzy search, recent commands, pinned favorites
+- **Incremental Search (Ctrl+F)** — Live filtering with match highlighting, scroll-to-result, history preservation
+- **Smooth scrolling** — PageUp/PageDown/Home/End with eased interpolation, scrollbar fade, edge shadows
+- **Context-aware keyboard hints** — Dynamic status bar hints that update based on current screen, palette, and search state
+- **Accessibility Manager** — Reduced motion mode (changes duration, not lifecycle), high contrast, no-color support
+- **Interactive workspace improvements** — Sidebar motion gliding, animated metric counters, micro-interactions
+- **Notification System** — Queued notifications with severity levels, auto-dismiss
+- **870+ automated tests** — Full coverage across all screens, animations, themes, and edge cases
 
 ---
 
@@ -105,7 +104,7 @@ repo-map . --interactive
 Launches a navigable terminal UI after analysis completes. Explore your repository structure, inspect files, and browse analysis results using keyboard navigation.
 
 ```text
-repo-map — Interactive Workspace                   v2.2.4
+repo-map — Interactive Workspace                   v3.0.0
 ────────────────────────────────────────────────────────────
 │ Overview        │ ▸ Help                            │  Details  │
 │ Statistics      │                                   │  ──────── │
@@ -140,8 +139,11 @@ repo-map — Interactive Workspace                   v2.2.4
 | `Space` | Toggle panel collapse |
 | `Home` / `End` | Jump to first/last item |
 | `PgUp` / `PgDn` | Scroll one page |
+| `Esc` | Close palette / search / modal |
 | `q` | Quit workspace |
-| `Ctrl+P` | Open command palette |
+| `Ctrl+P` / `Ctrl+K` | Open command palette |
+| `Ctrl+F` | Open incremental search |
+| `i` | Toggle inspector panel |
 | `/` | Filter tree (tree view focused) |
 | `?` | Open help view |
 
@@ -205,7 +207,7 @@ Press `Ctrl+P` to open the command palette for quick actions: navigate to views,
 ```json
 {
   "schemaVersion": "1.0.0",
-  "cliVersion": "2.2.4",
+  "cliVersion": "3.0.0",
   "projectName": "my-project",
   "stats": {
     "totalFiles": 42,
@@ -341,7 +343,7 @@ npm test
 ```
 
 Standards:
-- **862+ automated tests** — all must pass before merge
+- **870+ automated tests** — all must pass before merge
 - **Strict TypeScript** — no `any`, full type safety
 - **ESM-first** — native ES modules with `.js` extensions
 - **Product Identity spec** — [docs/design/PRODUCT_IDENTITY_V2.2.md](docs/design/PRODUCT_IDENTITY_V2.2.md) governs all UI changes

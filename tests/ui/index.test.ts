@@ -49,8 +49,12 @@ describe('createUISession', () => {
   it('startScanning renders an initial spinner line', () => {
     const ui = createUISession({ color: false });
     ui.startScanning('test-project');
+    // Advance one render frame tick so the RuntimeManager writes the scanning content
+    vi.advanceTimersByTime(20);
     const output = stderrSpy.mock.calls.map((c) => c[0] as string).join('');
-    expect(output).toContain('Scanning test-project');
+    expect(output).toContain('test-project');
+    // V3 session shows meaningful scanning messages instead of generic 'Scanning...'
+    expect(output).toContain('discovering');
   });
 
   it('finishScanning renders the completion stats line', () => {
@@ -75,10 +79,11 @@ describe('createUISession', () => {
   it('finishAnalyzing renders the elapsed time line', () => {
     const ui = createUISession({ color: false });
     ui.startAnalyzing();
+    vi.advanceTimersByTime(20);
     stderrSpy.mockClear();
     ui.finishAnalyzing(1.5);
     const output = stderrSpy.mock.calls.map((c) => c[0] as string).join('');
-    expect(output).toContain('Done in');
+    expect(output).toContain('Analysis complete');
     expect(output).toContain('1.5s');
   });
 
@@ -122,7 +127,8 @@ describe('createUISession', () => {
     stderrSpy.mockClear();
     ui.renderCompletion(analysis, 'report.md');
     const output = stderrSpy.mock.calls.map((c) => c[0] as string).join('');
-    expect(output).toContain('Output written to report.md');
+    expect(output).toContain('Output:');
+    expect(output).toContain('report.md');
   });
 
   // ── renderStats ────────────────────────────────────────────────
@@ -195,9 +201,9 @@ describe('createUISession', () => {
     ui.renderHelp();
     const output = stderrSpy.mock.calls.map((c) => c[0] as string).join('');
     expect(output).toContain('repo-map');
-    expect(output).toContain('USAGE');
-    expect(output).toContain('OPTIONS');
-    expect(output).toContain('EXAMPLES');
+    expect(output).toContain('Usage');
+    expect(output).toContain('Options');
+    expect(output).toContain('Examples');
   });
 
   // ── reportError ────────────────────────────────────────────────
