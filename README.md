@@ -1,3 +1,8 @@
+
+<p align="center">
+  <img src="https://github.com/p4inz-code/repo-map/blob/main/assets/banner.png?raw=true" alt="Repo Map Banner" width="100%">
+</p>
+
 # repo-map
 
 **Scan any codebase. Reveal its architecture, health score, technology stack, and actionable improvement suggestions — in one command.**
