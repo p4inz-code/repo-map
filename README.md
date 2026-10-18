@@ -19,7 +19,7 @@ npm i -g @p4inz-code/repo-map
 repo-map .
 ```
 
-Zero configuration. One command. Full insight.
+It needs no configuration: one command gives you the full picture.
 
 ---
 

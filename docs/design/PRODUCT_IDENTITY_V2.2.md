@@ -8,7 +8,7 @@
 
 ---
 
-## 0. The CLI laws
+## 0. The CLI Laws
 
 These are immutable engineering rules. Not suggestions. Not guidelines.
 Every contributor must follow them before merging any UI change.
@@ -329,8 +329,8 @@ The default is a **summary**. The report exists. It is not the default.
 ```
 
 **Layout rules:**
-- Strengths: in green, text default
-- High priority: in red, text default
+- Strengths: ✓ in green, text default
+- High priority: ✗ in red, text default
 - Medium priority: ! in yellow, text default
 - Low priority: · in dim, text default
 - Section headers ("Strengths", "Suggestions") bold
@@ -736,22 +736,22 @@ Terminals are vertical-space-constrained, every line must earn its place.
 
 | Information | Dashboard | Stats | Suggest | JSON |
 |-------------|-----------|-------|---------|------|
-| Classification | | — | — | |
-| Maturity | | — | — | |
-| Health score | (bar) | — | — | |
-| File/dir counts | | | — | |
-| Total size | | | — | |
-| Max depth | | | — | |
-| Languages | (list) | (detailed) | — | |
-| Largest file/dir | — | | — | |
-| Avg files/dir | — | | — | |
-| Strengths | — | — | | |
-| Suggestions | — | — | | |
-| Elapsed time | — | | — | |
-| Architecture | — | — | — | |
-| Dependencies | — | — | — | |
-| Refactoring | — | — | — | |
-| Risk report | — | — | — | |
+| Classification | Yes | — | — | Yes |
+| Maturity | Yes | — | — | Yes |
+| Health score | (bar) | — | — | Yes |
+| File/dir counts | Yes | Yes | — | Yes |
+| Total size | Yes | Yes | — | Yes |
+| Max depth | Yes | Yes | — | Yes |
+| Languages | (list) | (detailed) | — | Yes |
+| Largest file/dir | — | Yes | — | Yes |
+| Avg files/dir | — | Yes | — | Yes |
+| Strengths | — | — | Yes | Yes |
+| Suggestions | — | — | Yes | Yes |
+| Elapsed time | — | Yes | — | Yes |
+| Architecture | — | — | — | Yes |
+| Dependencies | — | — | — | Yes |
+| Refactoring | — | — | — | Yes |
+| Risk report | — | — | — | Yes |
 
 Every `—` is a deliberate omission.
 Adding it would violate the single-purpose rule.
