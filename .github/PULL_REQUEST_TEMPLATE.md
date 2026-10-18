@@ -2,7 +2,7 @@
 
 Brief description of the changes.
 
-## Type of Change
+## Type of change
 
 - [ ] Bug fix
 - [ ] New feature
@@ -10,7 +10,7 @@ Brief description of the changes.
 - [ ] Documentation update
 - [ ] Refactoring (no functional changes)
 
-## Test Plan
+## Test plan
 
 - [ ] All existing tests pass (`npm test`)
 - [ ] New tests added for changed functionality
@@ -24,4 +24,4 @@ Brief description of the changes.
 - [ ] Self-review completed
 - [ ] No `any` types introduced
 - [ ] Documentation updated (if applicable)
-- [ ] Product Identity spec followed (if UI change) — see [docs/design/PRODUCT_IDENTITY_V2.2.md](docs/design/PRODUCT_IDENTITY_V2.2.md)
+- [ ] Product Identity spec followed (if UI change). See [docs/design/PRODUCT_IDENTITY_V2.2.md](docs/design/PRODUCT_IDENTITY_V2.2.md)

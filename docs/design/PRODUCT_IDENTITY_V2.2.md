@@ -1,4 +1,4 @@
-# repo-map v2.2.0 — Product Identity & CLI UX Architecture
+# repo-map v2.2.0: Product Identity & CLI UX Architecture
 
 > Final design specification.
 > This document is the single source of truth for all visual decisions.
@@ -8,7 +8,7 @@
 
 ---
 
-## 0. The CLI Laws
+## 0. The CLI laws
 
 These are immutable engineering rules. Not suggestions. Not guidelines.
 Every contributor must follow them before merging any UI change.
@@ -99,15 +99,15 @@ If a law conflicts with a preference, the law wins.
 
 ---
 
-## 1. CLI Identity
+## 1. CLI identity
 
 ### What repo-map Is
 
 A lens. It scans a repository and reveals its structure.
 It does not generate, deploy, scaffold, or monitor.
-It shows you what you already have — and makes it visible.
+It shows you what you already have. And makes it visible.
 
-### The Identity Test
+### The identity test
 
 If someone sees a screenshot of repo-map output and cannot identify
 it as repo-map without reading the text, the visual identity has failed.
@@ -133,7 +133,7 @@ None of these require a logo. All of them are structural.
 
 ---
 
-## 2. The Five Commands
+## 2. The five commands
 
 > Information density scales with intent.
 > Each command shows exactly what its purpose requires.
@@ -156,17 +156,17 @@ Layer 2:  repo-map --suggest   → Strengths + Suggestions + Priorities
 Layer 3:  repo-map --json      → Everything, structured
 ```
 
-### Why Separate `--stats` and `--suggest`?
+### Why separate `--stats` and `--suggest`?
 
 These serve different intents:
 
-- `--stats` answers "what are the numbers?" — quantitative
-- `--suggest` answers "what should I do?" — qualitative
+- `--stats` answers "what are the numbers?", quantitative
+- `--suggest` answers "what should I do?", qualitative
 
 Mixing them in the default dashboard forces the user to parse
 information they didn't ask for. Separation respects intent.
 
-### The Default Command (`repo-map .`)
+### The default command (`repo-map .`)
 
 This IS the product. It must be perfect in the first five seconds.
 
@@ -211,34 +211,34 @@ This IS the product. It must be perfect in the first five seconds.
 
 The default is a **summary**. The report exists. It is not the default.
 
-### Why These Decisions Survive the Gate Questions
+### Why these decisions Survive the gate questions
 
 **Classification first (not metrics first):**
 - Q1: Reduces cognitive load by establishing context immediately
 - Q2: "CLI Tool" is more useful than "42 files" as the first fact
 - Q3: Experts scan identity first, numbers second
-- Q4: Cannot remove — it is the answer to the primary question
+- Q4: Cannot remove: it is the answer to the primary question
 
 **Health as a bar (not just a number):**
 - Q1: Bar is understood in 50ms, number requires interpretation
 - Q2: Bar communicates score faster than text
 - Q3: Daily users appreciate visual scanning over reading
-- Q4: Cannot remove — health is the second most important fact
+- Q4: Cannot remove: health is the second most important fact
 
 **No language bars (just text):**
 - Q1: Bars for 3-5 similar-count items are visually noisy
 - Q2: Clean text with right-aligned numbers scans faster
 - Q3: Experienced developers read "30 files (71%)" faster than interpret bars
-- Q4: Removed bars — the screen is clearer without them
+- Q4: Removed bars: the screen is clearer without them
 
 **No strengths/suggestions in default:**
-- Q1: Adding them would answer "what should I do?" — a different question
+- Q1: Adding them would answer "what should I do?", a different question
 - Q2: Mixing identity and improvement suggestions confuses the focal point
-- Q4: Removed — the dashboard is cleaner and more focused
+- Q4: Removed: the dashboard is cleaner and more focused
 
 **No elapsed time in default:**
 - Q1: Elapsed time is metadata about the tool, not the repository
-- Q4: Removed — the dashboard is cleaner
+- Q4: Removed: the dashboard is cleaner
 
 ---
 
@@ -329,8 +329,8 @@ The default is a **summary**. The report exists. It is not the default.
 ```
 
 **Layout rules:**
-- Strengths: ✓ in green, text default
-- High priority: ✗ in red, text default
+- Strengths: in green, text default
+- High priority: in red, text default
 - Medium priority: ! in yellow, text default
 - Low priority: · in dim, text default
 - Section headers ("Strengths", "Suggestions") bold
@@ -427,14 +427,14 @@ JSON         4 files (10%)
 
 ---
 
-## 4. Visual Language
+## 4. Visual language
 
-### The Grid
+### The grid
 
 Terminal is a character grid. Every element occupies cells.
 No overlap. No partial cells. No variable-width characters.
 
-### Content Width
+### Content width
 
 | Rule | Value | Why |
 |------|-------|-----|
@@ -445,7 +445,7 @@ No overlap. No partial cells. No variable-width characters.
 
 On terminals wider than 124 columns, content is centered.
 
-### Vertical Rhythm
+### Vertical rhythm
 
 ```
 Between sections inside box:    1 blank line
@@ -457,7 +457,7 @@ After box (outside):            1 blank line (only if output follows)
 No double blank lines. The box border provides separation.
 Single blank lines create rhythm without wasting space.
 
-### Box Width
+### Box width
 
 ```
 boxWidth = min(contentWidth + 2, terminalColumns)
@@ -466,7 +466,7 @@ boxWidth = min(contentWidth + 2, terminalColumns)
 Always 2 characters narrower than the terminal.
 Equal 1-character margins on each side.
 
-### The Brand Format
+### The brand format
 
 ```
 ╭─ repo-map · {name} ───────────────────────────────╮
@@ -480,9 +480,9 @@ Equal 1-character margins on each side.
 
 ---
 
-## 5. Component System
+## 5. Component system
 
-### Design System Principle
+### Design system principle
 
 Every component is part of a reusable system.
 Not isolated screens. Not one-off compositions.
@@ -569,7 +569,7 @@ Level 6:  Suffixes           dim                "(71%)"
 5. No italic. Terminals don't reliably support it.
 6. No reverse video. Too aggressive.
 
-### The Alignment Contract
+### The alignment contract
 
 Every label-value pair follows the same 20-char pattern:
 
@@ -586,14 +586,14 @@ It must be consistent across all screens.
 
 ---
 
-## 7. Animation Language
+## 7. Animation language
 
 ### Philosophy
 
 > The CLI is alive while working, completely still when finished.
 > Motion only exists during progress.
 
-### The Three-Phase Contract
+### The Three-Phase contract
 
 ```
 Phase 1:  ACKNOWLEDGE     Synchronous first frame        0ms
@@ -645,7 +645,7 @@ No cursor blinking. No residual animation. Still.
 **Why instant:** The analysis is done. The user wants the answer.
 Any animation between "done" and "showing results" is wasted time.
 
-### Timing Contract
+### Timing contract
 
 | Context | Interval | FPS | Why |
 |---------|----------|-----|-----|
@@ -654,7 +654,7 @@ Any animation between "done" and "showing results" is wasted time.
 | Windows legacy | 120ms | ~8 | Slower console I/O |
 | No TTY | ∞ | 0 | No animation |
 
-### Clean Transition Rule
+### Clean transition rule
 
 Between phases, the transition is seamless:
 
@@ -677,7 +677,7 @@ Only show when counts are meaningful.
 If total is unknown, use plain spinner.
 Never show fake progress.
 
-### Graceful Degradation
+### Graceful degradation
 
 ```
 Full terminal      → Full animations, full colors, Unicode
@@ -688,7 +688,7 @@ CI environment     → No animations, no colors, plain text
 
 ---
 
-## 8. Spacing System
+## 8. Spacing system
 
 All measurements in character cells. Every value justified.
 
@@ -711,18 +711,18 @@ All measurements in character cells. Every value justified.
 | `box-breathing` | 1 line top + bottom | Content doesn't crowd borders |
 | `post-box-gap` | 1 blank line | Separates box from output below |
 
-### Why Single Spacing
+### Why single spacing
 
 Double blank lines waste vertical space.
 The box border already provides visual separation.
 Inside the box, a single blank line creates rhythm.
-Terminals are vertical-space-constrained — every line must earn its place.
+Terminals are vertical-space-constrained, every line must earn its place.
 
 ---
 
-## 9. Information Architecture
+## 9. Information architecture
 
-### The Single-Purpose Rule
+### The Single-Purpose rule
 
 | Screen | Purpose | Question |
 |--------|---------|----------|
@@ -732,31 +732,31 @@ Terminals are vertical-space-constrained — every line must earn its place.
 | Error | Explain | "What went wrong?" |
 | Help | Guide | "What can I do?" |
 
-### What Goes Where
+### What goes where
 
 | Information | Dashboard | Stats | Suggest | JSON |
 |-------------|-----------|-------|---------|------|
-| Classification | ✓ | — | — | ✓ |
-| Maturity | ✓ | — | — | ✓ |
-| Health score | ✓ (bar) | — | — | ✓ |
-| File/dir counts | ✓ | ✓ | — | ✓ |
-| Total size | ✓ | ✓ | — | ✓ |
-| Max depth | ✓ | ✓ | — | ✓ |
-| Languages | ✓ (list) | ✓ (detailed) | — | ✓ |
-| Largest file/dir | — | ✓ | — | ✓ |
-| Avg files/dir | — | ✓ | — | ✓ |
-| Strengths | — | — | ✓ | ✓ |
-| Suggestions | — | — | ✓ | ✓ |
-| Elapsed time | — | ✓ | — | ✓ |
-| Architecture | — | — | — | ✓ |
-| Dependencies | — | — | — | ✓ |
-| Refactoring | — | — | — | ✓ |
-| Risk report | — | — | — | ✓ |
+| Classification | | — | — | |
+| Maturity | | — | — | |
+| Health score | (bar) | — | — | |
+| File/dir counts | | | — | |
+| Total size | | | — | |
+| Max depth | | | — | |
+| Languages | (list) | (detailed) | — | |
+| Largest file/dir | — | | — | |
+| Avg files/dir | — | | — | |
+| Strengths | — | — | | |
+| Suggestions | — | — | | |
+| Elapsed time | — | | — | |
+| Architecture | — | — | — | |
+| Dependencies | — | — | — | |
+| Refactoring | — | — | — | |
+| Risk report | — | — | — | |
 
 Every `—` is a deliberate omission.
 Adding it would violate the single-purpose rule.
 
-### The Output Budget
+### The output budget
 
 | Screen | Max lines (inside box) | Rationale |
 |--------|----------------------|-----------|
@@ -852,7 +852,7 @@ EXIT
 
 ---
 
-## 11. Benchmark: Premium CLI Comparison
+## 11. Benchmark: premium CLI comparison
 
 Every screen must be at least as good as the benchmark.
 If any screen feels busier, noisier, slower, or less readable, redesign it.
@@ -874,7 +874,7 @@ If any screen feels busier, noisier, slower, or less readable, redesign it.
 
 ## 12. Implementation Roadmap
 
-### Phase A: Dashboard Core
+### Phase A: dashboard Core
 
 | Step | Change | Files |
 |------|--------|-------|
@@ -886,7 +886,7 @@ If any screen feels busier, noisier, slower, or less readable, redesign it.
 | A6 | Remove elapsed time from default | `completion.ts` |
 | A7 | Add breathing whitespace | `completion.ts` |
 
-### Phase B: Stats Screen
+### Phase B: stats screen
 
 | Step | Change | Files |
 |------|--------|-------|
@@ -902,21 +902,21 @@ If any screen feels busier, noisier, slower, or less readable, redesign it.
 | C2 | Add `--suggest` flag to CLI | `cli.ts`, `bin.ts` |
 | C3 | Wire suggest into UISession | `ui/index.ts` |
 
-### Phase D: Color Tokens
+### Phase D: color tokens
 
 | Step | Change | Files |
 |------|--------|-------|
 | D1 | Add `bar-fill` token | `colors.ts` + presets |
 | D2 | Add `bar-empty` token | `colors.ts` + presets |
 
-### Phase E: Error & Help
+### Phase E: error & help
 
 | Step | Change | Files |
 |------|--------|-------|
 | E1 | Refine error hierarchy | `error.ts` |
 | E2 | Add `--suggest` to help output | `help.ts` |
 
-### Phase F: Testing
+### Phase F: testing
 
 | Step | Change | Files |
 |------|--------|-------|
@@ -928,7 +928,7 @@ If any screen feels busier, noisier, slower, or less readable, redesign it.
 | F6 | Verify narrow terminal adaptation | All screen tests |
 | F7 | Verify `--no-color` mode | All screen tests |
 
-### Phase G: Integration Verification
+### Phase G: integration verification
 
 | Step | What to verify |
 |------|---------------|
@@ -960,7 +960,7 @@ If any screen feels busier, noisier, slower, or less readable, redesign it.
 | `bar-fill` | Bold Green (92) | 82 | `#00ff5e` | Filled bar segments |
 | `bar-empty` | Default | 236 | `#303030` | Empty bar segments |
 
-## Appendix B: Prohibited Elements
+## Appendix B: prohibited elements
 
 | Element | Why prohibited |
 |---------|---------------|

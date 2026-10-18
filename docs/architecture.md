@@ -4,7 +4,7 @@
 
 repo-map is a CLI tool that scans a repository and generates architecture documentation. It detects technologies, builds directory trees, and produces Markdown or JSON output.
 
-## Project Structure
+## Project structure
 
 ```
 src/
@@ -74,7 +74,7 @@ src/
     └── utils/            # ANSI escape sequence utilities
 ```
 
-## Data Flow
+## Data flow
 
 ```
 CLI Args (argv)
@@ -138,23 +138,23 @@ interface Analysis {
 }
 ```
 
-## Technology Detection
+## Technology detection
 
 The detector subsystem uses a registry pattern with deduplication:
 
-1. **LanguageDetector** - Matches file extensions to programming languages
-2. **FrameworkDetector** - Detects frameworks from config files and dependencies
-3. **ToolDetector** - Identifies development tools and CI systems
+1. LanguageDetector - Matches file extensions to programming languages
+2. FrameworkDetector - Detects frameworks from config files and dependencies
+3. ToolDetector - Identifies development tools and CI systems
 
 Detectors run in registration order. The first detector to report a technology name wins.
 
 ## Design Principles
 
-- **Pure functions** - Core logic has no side effects beyond filesystem reads
-- **No scope expansion** - Each module has a single responsibility
-- **Type safety** - Strict TypeScript with no `any` types
-- **ESM-first** - Native ES modules with `.js` extensions in imports
-- **Minimal dependencies** - Only `commander` and `ignore`
+- Pure functions - Core logic has no side effects beyond filesystem reads
+- No scope expansion - Each module has a single responsibility
+- Type safety - Strict TypeScript with no `any` types
+- ESM-first - Native ES modules with `.js` extensions in imports
+- Minimal dependencies - Only `commander` and `ignore`
 
 ## Testing
 

@@ -1,11 +1,11 @@
-# Implementation Blueprint — repo-map v2.1 CLI
+# Implementation Blueprint: repo-map v2.1 CLI
 
 > Frozen architecture. Execution plan. Single source of truth for all implementation work.
 > Do not redesign. Do not introduce new abstractions unless a genuine implementation blocker is discovered.
 
 ---
 
-## 0. Dependency Graph
+## 0. Dependency graph
 
 ```
 PHASE 2 ──────────────────────────────────────────────────────────
@@ -62,17 +62,17 @@ PHASE 13 ───────────────────────�
 
 ---
 
-## 1. Phase Breakdown
+## 1. Phase breakdown
 
-### Phase 1: Design System Document
+### Phase 1: design system document
 
 **Status:** COMPLETE (`docs/design/CLI_DESIGN_SYSTEM.md` written)
 
 ---
 
-### Phase 2: Theme System
+### Phase 2: theme system
 
-**Goal:** Implement the theme layer — the only place where colors, symbols, borders, and text styles are defined.
+**Goal:** Implement the theme layer. The only place where colors, symbols, borders, and text styles are defined.
 
 **Files created:**
 | File | LOC | Purpose |
@@ -130,9 +130,9 @@ type TextStyle = { bold?: boolean; dim?: boolean; color?: ColorToken };
 
 ---
 
-### Phase 3: ANSI Utilities
+### Phase 3: ANSI utilities
 
-**Goal:** Implement the ANSI escape sequence helpers — the only place where raw escape codes are produced.
+**Goal:** Implement the ANSI escape sequence helpers. The only place where raw escape codes are produced.
 
 **Files created:**
 | File | LOC | Purpose |
@@ -182,7 +182,7 @@ function stripAnsi(text: string): string;
 
 ---
 
-### Phase 4: Layout Utilities
+### Phase 4: layout utilities
 
 **Goal:** Implement terminal width detection, content width calculation, and space distribution.
 
@@ -233,15 +233,15 @@ function breakpoint(columns: number): WidthInfo['breakpoint'];
 
 ---
 
-### Phase 5: Animation Types
+### Phase 5: animation types
 
-**Goal:** Define the Animation interface and AnimationManager — the single timer controller for all animations.
+**Goal:** Define the Animation interface and AnimationManager. The single timer controller for all animations.
 
 **Files created:**
 | File | LOC | Purpose |
 |------|-----|---------|
 | `src/ui/animation/types.ts` | 25 | `Animation` interface, `AnimationFrame` type |
-| `src/ui/animation/index.ts` | 95 | `AnimationManager` class — single setInterval, lifecycle, registration |
+| `src/ui/animation/index.ts` | 95 | `AnimationManager` class, single setInterval, lifecycle, registration |
 
 **Files modified:** None
 
@@ -306,7 +306,7 @@ class AnimationManager {
 
 ---
 
-### Phase 6: UI Primitives
+### Phase 6: UI primitives
 
 **Goal:** Build all reusable UI primitives. These are pure functions that produce `string[]` (pre-ANSI lines).
 
@@ -314,11 +314,11 @@ class AnimationManager {
 | File | LOC | Purpose |
 |------|-----|---------|
 | `src/ui/primitives/text.ts` | 95 | `style()`, `wrap()`, `truncate()`, `padLeft()`, `padRight()`, `stripAnsi()` (re-export) |
-| `src/ui/primitives/divider.ts` | 30 | `renderDivider()` — horizontal rule with optional label |
-| `src/ui/primitives/box.ts` | 70 | `renderBox()` — bordered content panel |
-| `src/ui/primitives/table.ts` | 85 | `renderTable()` — column-aligned table |
-| `src/ui/primitives/list.ts` | 35 | `renderList()` — bulleted/ordered list |
-| `src/ui/primitives/group.ts` | 30 | `renderGroup()` — labeled content group (e.g., "Languages" section) |
+| `src/ui/primitives/divider.ts` | 30 | `renderDivider()`, horizontal rule with optional label |
+| `src/ui/primitives/box.ts` | 70 | `renderBox()`, bordered content panel |
+| `src/ui/primitives/table.ts` | 85 | `renderTable()`, column-aligned table |
+| `src/ui/primitives/list.ts` | 35 | `renderList()`, bulleted/ordered list |
+| `src/ui/primitives/group.ts` | 30 | `renderGroup()`, labeled content group (e.g., "Languages" section) |
 | `src/ui/primitives/index.ts` | 10 | Re-exports all primitives |
 
 **Files modified:** None
@@ -365,12 +365,12 @@ function renderGroup(title: string, items: string[]): string[];
 - Animation state, cursor positioning
 
 **Tests to write:** 6 test files:
-- `tests/ui/primitives/text.test.ts` — wrapping at boundaries, truncation, padding, style application
-- `tests/ui/primitives/divider.test.ts` — full width, with label, custom char
-- `tests/ui/primitives/box.test.ts` — round/single/none borders, with title, narrow width, empty content
-- `tests/ui/primitives/table.test.ts` — column alignment, width scaling, compact mode, single row, empty rows
-- `tests/ui/primitives/list.test.ts` — all 4 styles, empty list, nested indentation
-- `tests/ui/primitives/group.test.ts` — empty group, single item, multiple items
+- `tests/ui/primitives/text.test.ts`: wrapping at boundaries, truncation, padding, style application
+- `tests/ui/primitives/divider.test.ts`: full width, with label, custom char
+- `tests/ui/primitives/box.test.ts`: round/single/none borders, with title, narrow width, empty content
+- `tests/ui/primitives/table.test.ts`: column alignment, width scaling, compact mode, single row, empty rows
+- `tests/ui/primitives/list.test.ts`: all 4 styles, empty list, nested indentation
+- `tests/ui/primitives/group.test.ts`: empty group, single item, multiple items
 
 **Definition of Done:**
 - Every primitive returns `string[]` with correct visual structure
@@ -382,14 +382,14 @@ function renderGroup(title: string, items: string[]): string[];
 
 ---
 
-### Phase 7: Renderer
+### Phase 7: renderer
 
-**Goal:** Implement the central renderer — the only module that applies ANSI codes and manages terminal output.
+**Goal:** Implement the central renderer. The only module that applies ANSI codes and manages terminal output.
 
 **Files created:**
 | File | LOC | Purpose |
 |------|-----|---------|
-| `src/ui/renderer.ts` | 100 | Renderer class — frame composition, ANSI application, cursor management, output |
+| `src/ui/renderer.ts` | 100 | Renderer class, frame composition, ANSI application, cursor management, output |
 
 **Files modified:** None
 
@@ -424,9 +424,9 @@ class Renderer {
 ```
 
 **Internal helpers:**
-- `lastFrameLength: number` — tracks how many lines were last rendered (for `update()` cursor-up calculation)
-- `animationArea: [number, number]` — line range for animation updates
-- `resolveStyle(style: TextStyle): string` — text → ANSI prefix + suffix
+- `lastFrameLength: number`: tracks how many lines were last rendered (for `update()` cursor-up calculation)
+- `animationArea: [number, number]`: line range for animation updates
+- `resolveStyle(style: TextStyle): string`: text → ANSI prefix + suffix
 
 **What it must NOT know about:**
 - Analysis data, business logic
@@ -453,7 +453,7 @@ class Renderer {
 
 ---
 
-### Phase 8: Animation Implementations
+### Phase 8: animation Implementations
 
 **Goal:** Build the concrete animation types used during scanning and analyzing phases.
 
@@ -462,7 +462,7 @@ class Renderer {
 |------|-----|---------|
 | `src/ui/animation/spinner.ts` | 55 | Frame-based spinner with configurable frames and interval |
 | `src/ui/animation/progress-bar.ts` | 50 | Deterministic progress bar with percentage |
-| `src/ui/animation/eta.ts` | 35 | ETA timer — elapsed/duration display |
+| `src/ui/animation/eta.ts` | 35 | ETA timer, elapsed/duration display |
 
 **Files modified:** None (animations register with the Manager from Phase 5)
 
@@ -503,9 +503,9 @@ class EtaAnimation implements Animation {
 - Terminal width directly (use width passed via theme/layout)
 
 **Tests to write:** 3 test files:
-- `tests/ui/animation/spinner.test.ts` — frame advancement, wrapping, text update, dispose cleanup
-- `tests/ui/animation/progress-bar.test.ts` — percentage rendering, 0% and 100% edges, null when unchanged
-- `tests/ui/animation/eta.test.ts` — time formatting, ~1 second throttle, 0 elapsed
+- `tests/ui/animation/spinner.test.ts`: frame advancement, wrapping, text update, dispose cleanup
+- `tests/ui/animation/progress-bar.test.ts`: percentage rendering, 0% and 100% edges, null when unchanged
+- `tests/ui/animation/eta.test.ts`: time formatting, ~1 second throttle, 0 elapsed
 
 **Definition of Done:**
 - All 3 animations implement the Animation interface
@@ -517,9 +517,9 @@ class EtaAnimation implements Animation {
 
 ---
 
-### Phase 9: Progress Pipeline Screens
+### Phase 9: progress pipeline screens
 
-**Goal:** Implement the scanning and analyzing phase screens — the first visible output when running repo-map.
+**Goal:** Implement the scanning and analyzing phase screens. The first visible output when running repo-map.
 
 **Files created:**
 | File | LOC | Purpose |
@@ -562,18 +562,18 @@ function renderAnalyzePhase(
 
 **Definition of Done:**
 - Scanning screen shows spinner + project name
-- After scan completes: "✓ Scanned my-project — 42 files, 12 directories"
+- After scan completes: "Scanned my-project: 42 files, 12 directories"
 - Analyzing screen shows spinner + "Analyzing..."
-- After analysis completes: "✓ Done in X.Xs"
+- After analysis completes: "Done in X.Xs"
 - Both screens properly start/stop the AnimationManager
 
 **Estimated LOC:** 95
 
 ---
 
-### Phase 10: Completion Screen
+### Phase 10: completion screen
 
-**Goal:** Implement the final results screen — the premium CLI experience.
+**Goal:** Implement the final results screen. The premium CLI experience.
 
 **Files created:**
 | File | LOC | Purpose |
@@ -635,7 +635,7 @@ function renderCompletion(
 
 ---
 
-### Phase 11: Error, Stats, Help Screens
+### Phase 11: error, stats, help screens
 
 **Goal:** Implement error presentation, stats summary, and the redesigned help screen.
 
@@ -685,9 +685,9 @@ function renderHelp(renderer: Renderer, version: string): void;
 - File system I/O
 
 **Tests to write:** 3 test files:
-- `tests/ui/screens/error.test.ts` — renders box with error styling, non-fatal vs fatal, long message wrapping, suggestion display
-- `tests/ui/screens/stats.test.ts` — all stats displayed, language breakdown, narrow terminal, no language data
-- `tests/ui/screens/help.test.ts` — version displayed, all option groups present, EXAMPLES section
+- `tests/ui/screens/error.test.ts`: renders box with error styling, non-fatal vs fatal, long message wrapping, suggestion display
+- `tests/ui/screens/stats.test.ts`: all stats displayed, language breakdown, narrow terminal, no language data
+- `tests/ui/screens/help.test.ts`: version displayed, all option groups present, EXAMPLES section
 
 **Definition of Done:**
 - Error screen renders calm, actionable error messages
@@ -699,14 +699,14 @@ function renderHelp(renderer: Renderer, version: string): void;
 
 ---
 
-### Phase 12: CLI Integration
+### Phase 12: CLI integration
 
 **Goal:** Wire the UI system into the existing CLI pipeline. Replace raw `process.stderr.write()` calls with UISession.
 
 **Files created:**
 | File | LOC | Purpose |
 |------|-----|---------|
-| `src/ui/index.ts` | 75 | `UISession` — top-level orchestrator wrapping Renderer + AnimationManager + Screens |
+| `src/ui/index.ts` | 75 | `UISession`, top-level orchestrator wrapping Renderer + AnimationManager + Screens |
 
 **Files modified:**
 | File | LOC Changed | Purpose |
@@ -810,7 +810,7 @@ ui.close();
 
 ---
 
-### Phase 13: Tests + Polish
+### Phase 13: tests + polish
 
 **Goal:** Complete test coverage, edge cases, cross-platform verification, and final optimization.
 
@@ -848,14 +848,14 @@ All test files across prior phases. Here is the complete test inventory:
 **Final polish items:**
 1. Verify `--no-color` produces zero ANSI sequences (grep for `\x1b`)
 2. Run on Windows (CI) to verify fallback behavior
-3. Run with `stdout` piped to file — verify no escape sequences leak
-4. Run with `TERM=vt100` — verify graceful degradation
-5. Benchmark: time 10 runs of `repo-map .` v2.0 vs v2.1 — ensure no regression
+3. Run with `stdout` piped to file, verify no escape sequences leak
+4. Run with `TERM=vt100`: verify graceful degradation
+5. Benchmark: time 10 runs of `repo-map .` v2.0 vs v2.1, ensure no regression
 6. Verify SIGINT handling restores cursor (cursorShow()) on early exit
 
 ---
 
-## 2. Exact File Implementation Order
+## 2. Exact file implementation order
 
 The order is designed so that:
 - Each file depends only on files created earlier in the order
@@ -927,231 +927,231 @@ Phase 13:
 
 ---
 
-## 3. Module Specification
+## 3. Module specification
 
 ### Module: `src/ui/theme/colors.ts`
 
 | Property | Value |
 |----------|-------|
-| **Responsibility** | Map semantic ColorToken to ANSI escape code for the detected color mode. Detect color mode from env/args. |
-| **Public API** | `detectColorMode(): ColorMode`, `resolveColor(token: ColorToken, mode: ColorMode): string` |
-| **Internal helpers** | `ansi16(token): string`, `ansi256(token): string`, `truecolor(token): string` — each maps tokens to specific codes |
-| **Must NOT know** | Symbols, borders, themes, layout, any business logic |
-| **Tests** | Every token in every mode returns non-empty string. `NO_COLOR` produces empty strings. Unknown token produces empty string. |
+| Responsibility | Map semantic ColorToken to ANSI escape code for the detected color mode. Detect color mode from env/args. |
+| Public API | `detectColorMode(): ColorMode`, `resolveColor(token: ColorToken, mode: ColorMode): string` |
+| Internal helpers | `ansi16(token): string`, `ansi256(token): string`, `truecolor(token): string`, each maps tokens to specific codes |
+| Must NOT know | Symbols, borders, themes, layout, any business logic |
+| Tests | Every token in every mode returns non-empty string. `NO_COLOR` produces empty strings. Unknown token produces empty string. |
 
 ### Module: `src/ui/theme/symbols.ts`
 
 | Property | Value |
 |----------|-------|
-| **Responsibility** | Map SymbolToken to the correct character based on Unicode support. |
-| **Public API** | `detectUnicodeSupport(): boolean`, `resolveSymbol(token: SymbolToken, unicode: boolean): string` |
-| **Internal helpers** | `UNICODE_SYMBOLS: Record<SymbolToken, string>`, `ASCII_SYMBOLS: Record<SymbolToken, string>` |
-| **Must NOT know** | Colors, themes, any terminal detection beyond Unicode |
-| **Tests** | Every token returns expected character. ASCII fallback returns expected ASCII char. |
+| Responsibility | Map SymbolToken to the correct character based on Unicode support. |
+| Public API | `detectUnicodeSupport(): boolean`, `resolveSymbol(token: SymbolToken, unicode: boolean): string` |
+| Internal helpers | `UNICODE_SYMBOLS: Record<SymbolToken, string>`, `ASCII_SYMBOLS: Record<SymbolToken, string>` |
+| Must NOT know | Colors, themes, any terminal detection beyond Unicode |
+| Tests | Every token returns expected character. ASCII fallback returns expected ASCII char. |
 
 ### Module: `src/ui/theme/borders.ts`
 
 | Property | Value |
 |----------|-------|
-| **Responsibility** | Map BorderStyle to a set of border characters (corners, lines). |
-| **Public API** | `resolveBorder(style: BorderStyle, unicode: boolean): BorderChars` |
-| **Internal helpers** | Style definitions as data objects |
-| **Must NOT know** | Colors, layout, any rendering logic |
-| **Tests** | Every style returns 6 characters. `'none'` returns empty strings. Unicode vs ASCII fallback. |
+| Responsibility | Map BorderStyle to a set of border characters (corners, lines). |
+| Public API | `resolveBorder(style: BorderStyle, unicode: boolean): BorderChars` |
+| Internal helpers | Style definitions as data objects |
+| Must NOT know | Colors, layout, any rendering logic |
+| Tests | Every style returns 6 characters. `'none'` returns empty strings. Unicode vs ASCII fallback. |
 
 ### Module: `src/ui/theme/index.ts`
 
 | Property | Value |
 |----------|-------|
-| **Responsibility** | Provide the Theme interface and `resolveTheme()` factory. Cache resolved theme. |
-| **Public API** | `getTheme(options?: { color?: boolean; unicode?: boolean; highContrast?: boolean }): Theme` |
-| **Internal helpers** | `THEME_PRESETS: Record<string, Theme>`, cached instance |
-| **Must NOT know** | Screens, animations, primitives |
-| **Tests** | `getTheme()` returns correct preset for each option combination. Style applies color correctly. Style with no style returns text unchanged. |
+| Responsibility | Provide the Theme interface and `resolveTheme()` factory. Cache resolved theme. |
+| Public API | `getTheme(options?: { color?: boolean; unicode?: boolean; highContrast?: boolean }): Theme` |
+| Internal helpers | `THEME_PRESETS: Record<string, Theme>`, cached instance |
+| Must NOT know | Screens, animations, primitives |
+| Tests | `getTheme()` returns correct preset for each option combination. Style applies color correctly. Style with no style returns text unchanged. |
 
 ### Module: `src/ui/utils/ansi.ts`
 
 | Property | Value |
 |----------|-------|
-| **Responsibility** | Produce ANSI escape sequences for cursor control and line management. Strip ANSI from strings. |
-| **Public API** | `cursorUp()`, `cursorHide()`, `cursorShow()`, `clearLine()`, `clearScreen()`, `carriageReturn()`, `savePosition()`, `restorePosition()`, `stripAnsi()`, `isTTY()`, `isWindowsLegacy()` |
-| **Internal helpers** | Windows-specific cursor workaround for ConPTY |
-| **Must NOT know** | Theme, colors, symbols, layout, business logic |
-| **Tests** | Return values start with `\x1b[` or `\r`. `stripAnsi()` removes known patterns. |
+| Responsibility | Produce ANSI escape sequences for cursor control and line management. Strip ANSI from strings. |
+| Public API | `cursorUp()`, `cursorHide()`, `cursorShow()`, `clearLine()`, `clearScreen()`, `carriageReturn()`, `savePosition()`, `restorePosition()`, `stripAnsi()`, `isTTY()`, `isWindowsLegacy()` |
+| Internal helpers | Windows-specific cursor workaround for ConPTY |
+| Must NOT know | Theme, colors, symbols, layout, business logic |
+| Tests | Return values start with `\x1b[` or `\r`. `stripAnsi()` removes known patterns. |
 
 ### Module: `src/ui/layout/width.ts`
 
 | Property | Value |
 |----------|-------|
-| **Responsibility** | Detect terminal width, compute content width, distribute column space. |
-| **Public API** | `getTerminalWidth()`, `setForcedWidth()`, `scaleColumns()`, `breakpoint()` |
-| **Internal helpers** | `MARGIN = 2`, `MAX_CONTENT_WIDTH = 100`, `NARROW_BREAKPOINT = 60`, `WIDE_BREAKPOINT = 120` |
-| **Must NOT know** | Theme, colors, any business logic |
-| **Tests** | Valid widths, forced mode, column scaling fairness, breakpoint ranges |
+| Responsibility | Detect terminal width, compute content width, distribute column space. |
+| Public API | `getTerminalWidth()`, `setForcedWidth()`, `scaleColumns()`, `breakpoint()` |
+| Internal helpers | `MARGIN = 2`, `MAX_CONTENT_WIDTH = 100`, `NARROW_BREAKPOINT = 60`, `WIDE_BREAKPOINT = 120` |
+| Must NOT know | Theme, colors, any business logic |
+| Tests | Valid widths, forced mode, column scaling fairness, breakpoint ranges |
 
 ### Module: `src/ui/animation/types.ts`
 
 | Property | Value |
 |----------|-------|
-| **Responsibility** | Define shared types for the animation system. |
-| **Public API** | `AnimationFrame`, `Animation` interface |
-| **Internal helpers** | None — pure type definitions |
-| **Must NOT know** | Any implementation details |
-| **Tests** | Type-check only (no runtime tests needed for types) |
+| Responsibility | Define shared types for the animation system. |
+| Public API | `AnimationFrame`, `Animation` interface |
+| Internal helpers | None, pure type definitions |
+| Must NOT know | Any implementation details |
+| Tests | Type-check only (no runtime tests needed for types) |
 
 ### Module: `src/ui/animation/index.ts` (AnimationManager)
 
 | Property | Value |
 |----------|-------|
-| **Responsibility** | Single timer controller. Register/unregister animations. Deliver frames via callback. Frame coalescing. |
-| **Public API** | `AnimationManager` class with `register()`, `unregister()`, `start()`, `stop()`, `pause()`, `resume()` |
-| **Internal helpers** | `_tick()` — iterate animations, call tick(dt), collect non-null frames, deliver to callback |
-| **Must NOT know** | Screen state, theme, renderer, what frames are used for |
-| **Tests** | Timer lifecycle, frame delivery, coalescing, dispose on stop, pause/resume |
+| Responsibility | Single timer controller. Register/unregister animations. Deliver frames via callback. Frame coalescing. |
+| Public API | `AnimationManager` class with `register()`, `unregister()`, `start()`, `stop()`, `pause()`, `resume()` |
+| Internal helpers | `_tick()`, iterate animations, call tick(dt), collect non-null frames, deliver to callback |
+| Must NOT know | Screen state, theme, renderer, what frames are used for |
+| Tests | Timer lifecycle, frame delivery, coalescing, dispose on stop, pause/resume |
 
 ### Module: `src/ui/primitives/text.ts`
 
 | Property | Value |
 |----------|-------|
-| **Responsibility** | Apply text styles via theme. Wrap text to width. Truncate with ellipsis. Pad/align text. |
-| **Public API** | `style(text, theme, style?)`, `wrap(text, width)`, `truncate(text, maxLen)`, `padLeft(text, len)`, `padRight(text, len)` |
-| **Internal helpers** | `ELLIPSIS = '…'` / `'...'` (ASCII fallback) |
-| **Must NOT know** | Boxes, tables, lists, screens, animation |
-| **Tests** | Wrapping at boundary, no mid-word break, truncation adds `…`, padding produces correct length |
+| Responsibility | Apply text styles via theme. Wrap text to width. Truncate with ellipsis. Pad/align text. |
+| Public API | `style(text, theme, style?)`, `wrap(text, width)`, `truncate(text, maxLen)`, `padLeft(text, len)`, `padRight(text, len)` |
+| Internal helpers | `ELLIPSIS = '…'` / `'...'` (ASCII fallback) |
+| Must NOT know | Boxes, tables, lists, screens, animation |
+| Tests | Wrapping at boundary, no mid-word break, truncation adds `…`, padding produces correct length |
 
 ### Module: `src/ui/primitives/divider.ts`
 
 | Property | Value |
 |----------|-------|
-| **Responsibility** | Render a horizontal rule across content width. |
-| **Public API** | `renderDivider(options?) → string` |
-| **Internal helpers** | `char.repeat(width)` with label centering |
-| **Must NOT know** | Any other primitives, screens, business logic |
-| **Tests** | Full width, with label (label centered), custom char, zero width |
+| Responsibility | Render a horizontal rule across content width. |
+| Public API | `renderDivider(options?) → string` |
+| Internal helpers | `char.repeat(width)` with label centering |
+| Must NOT know | Any other primitives, screens, business logic |
+| Tests | Full width, with label (label centered), custom char, zero width |
 
 ### Module: `src/ui/primitives/box.ts`
 
 | Property | Value |
 |----------|-------|
-| **Responsibility** | Render a bordered panel around content. |
-| **Public API** | `renderBox(content, options?) → string[]` |
-| **Internal helpers** | `_renderTop(width, style, title)`, `_renderBottom(width, style)`, `_renderSide(content, width, padding)` |
-| **Must NOT know** | Tables, lists, screens, analysis data |
-| **Tests** | Round/single/none borders, with title, empty content, padding 0, narrow width truncation, content wider than box |
+| Responsibility | Render a bordered panel around content. |
+| Public API | `renderBox(content, options?) → string[]` |
+| Internal helpers | `_renderTop(width, style, title)`, `_renderBottom(width, style)`, `_renderSide(content, width, padding)` |
+| Must NOT know | Tables, lists, screens, analysis data |
+| Tests | Round/single/none borders, with title, empty content, padding 0, narrow width truncation, content wider than box |
 
 ### Module: `src/ui/primitives/table.ts`
 
 | Property | Value |
 |----------|-------|
-| **Responsibility** | Render aligned columns with headers and rows. |
-| **Public API** | `renderTable(options) → string[]` |
-| **Internal helpers** | `_calculateWidths(columns, available)`, `_renderHeader(columns, widths)`, `_renderRow(cells, widths)` |
-| **Must NOT know** | Business logic, screens, animation |
-| **Tests** | Column alignment, width scaling, compact mode, single row, empty rows, header only, narrow terminal truncation |
+| Responsibility | Render aligned columns with headers and rows. |
+| Public API | `renderTable(options) → string[]` |
+| Internal helpers | `_calculateWidths(columns, available)`, `_renderHeader(columns, widths)`, `_renderRow(cells, widths)` |
+| Must NOT know | Business logic, screens, animation |
+| Tests | Column alignment, width scaling, compact mode, single row, empty rows, header only, narrow terminal truncation |
 
 ### Module: `src/ui/primitives/list.ts`
 
 | Property | Value |
 |----------|-------|
-| **Responsibility** | Render bulleted, pointer, ordered, or plain lists. |
-| **Public API** | `renderList(items, style?) → string[]` |
-| **Internal helpers** | Bullet/pointer character selection, ordered numbering |
-| **Must NOT know** | Any other primitives, screens |
-| **Tests** | All 4 styles, empty list, single item, multiple items, nested display |
+| Responsibility | Render bulleted, pointer, ordered, or plain lists. |
+| Public API | `renderList(items, style?) → string[]` |
+| Internal helpers | Bullet/pointer character selection, ordered numbering |
+| Must NOT know | Any other primitives, screens |
+| Tests | All 4 styles, empty list, single item, multiple items, nested display |
 
 ### Module: `src/ui/primitives/group.ts`
 
 | Property | Value |
 |----------|-------|
-| **Responsibility** | Render a labeled section: header + indented content. |
-| **Public API** | `renderGroup(title, items) → string[]` |
-| **Internal helpers** | Header formatting, content indentation |
-| **Must NOT know** | Any other primitives, screens |
-| **Tests** | Empty group, single item, multiple items, long title |
+| Responsibility | Render a labeled section: header + indented content. |
+| Public API | `renderGroup(title, items) → string[]` |
+| Internal helpers | Header formatting, content indentation |
+| Must NOT know | Any other primitives, screens |
+| Tests | Empty group, single item, multiple items, long title |
 
 ### Module: `src/ui/renderer.ts`
 
 | Property | Value |
 |----------|-------|
-| **Responsibility** | Render frames to terminal. Manage cursor for updates. Apply ANSI styling. Track rendered line count. |
-| **Public API** | `Renderer` class with `render()`, `update()`, `clear()`, `setAnimationArea()`, `styleLine()`, `wrapInBox()` |
-| **Internal helpers** | `_lastLineCount`, `_animationArea`, `_writeToStdout(lines)` |
-| **Must NOT know** | Analysis data, screen state, animation timers |
-| **Tests** | `render()` writes to stdout, `update()` emits cursor-up, `clear()` emits clear-line, `styleLine()` uses theme, empty input produces nothing |
+| Responsibility | Render frames to terminal. Manage cursor for updates. Apply ANSI styling. Track rendered line count. |
+| Public API | `Renderer` class with `render()`, `update()`, `clear()`, `setAnimationArea()`, `styleLine()`, `wrapInBox()` |
+| Internal helpers | `_lastLineCount`, `_animationArea`, `_writeToStdout(lines)` |
+| Must NOT know | Analysis data, screen state, animation timers |
+| Tests | `render()` writes to stdout, `update()` emits cursor-up, `clear()` emits clear-line, `styleLine()` uses theme, empty input produces nothing |
 
 ### Module: `src/ui/screens/scanning.ts`
 
 | Property | Value |
 |----------|-------|
-| **Responsibility** | Manage the scanning phase UI: spinner + project name → completion message. |
-| **Public API** | `renderScanPhase(renderer, manager, { projectName })` |
-| **Internal helpers** | Creates SpinnerAnimation, registers with manager, awaits scan completion, stops spinner, renders completion line |
-| **Must NOT know** | Analysis pipeline, file system, other screens |
-| **Tests** | Spinner starts, completion renders, manager is stopped |
+| Responsibility | Manage the scanning phase UI: spinner + project name → completion message. |
+| Public API | `renderScanPhase(renderer, manager, { projectName })` |
+| Internal helpers | Creates SpinnerAnimation, registers with manager, awaits scan completion, stops spinner, renders completion line |
+| Must NOT know | Analysis pipeline, file system, other screens |
+| Tests | Spinner starts, completion renders, manager is stopped |
 
 ### Module: `src/ui/screens/analyzing.ts`
 
 | Property | Value |
 |----------|-------|
-| **Responsibility** | Manage the analyzing phase UI: spinner + "Analyzing..." → elapsed time. |
-| **Public API** | `renderAnalyzePhase(renderer, manager)` |
-| **Internal helpers** | Creates SpinnerAnimation, registers with manager, awaits analysis, renders elapsed |
-| **Must NOT know** | Scanning phase, completion screen, analysis data details |
-| **Tests** | Spinner starts, elapsed renders, manager is stopped |
+| Responsibility | Manage the analyzing phase UI: spinner + "Analyzing..." → elapsed time. |
+| Public API | `renderAnalyzePhase(renderer, manager)` |
+| Internal helpers | Creates SpinnerAnimation, registers with manager, awaits analysis, renders elapsed |
+| Must NOT know | Scanning phase, completion screen, analysis data details |
+| Tests | Spinner starts, elapsed renders, manager is stopped |
 
 ### Module: `src/ui/screens/completion.ts`
 
 | Property | Value |
 |----------|-------|
-| **Responsibility** | Render the final analysis results as a professional summary. |
-| **Public API** | `renderCompletion(options, renderer, width)` |
-| **Internal helpers** | Composes box + group + list + table primitives |
-| **Must NOT know** | Animation, analysis pipeline, file system |
-| **Tests** | Full output structure, narrow terminal, empty data, no output path |
+| Responsibility | Render the final analysis results as a professional summary. |
+| Public API | `renderCompletion(options, renderer, width)` |
+| Internal helpers | Composes box + group + list + table primitives |
+| Must NOT know | Animation, analysis pipeline, file system |
+| Tests | Full output structure, narrow terminal, empty data, no output path |
 
 ### Module: `src/ui/screens/error.ts`
 
 | Property | Value |
 |----------|-------|
-| **Responsibility** | Render user-facing errors in a calm, actionable format. |
-| **Public API** | `renderError(options, renderer)` |
-| **Internal helpers** | Composes box + list primitives |
-| **Must NOT know** | Animation, analysis data, file system |
-| **Tests** | Error box renders, suggestion displays, non-fatal vs fatal, long message wrapping |
+| Responsibility | Render user-facing errors in a calm, actionable format. |
+| Public API | `renderError(options, renderer)` |
+| Internal helpers | Composes box + list primitives |
+| Must NOT know | Animation, analysis data, file system |
+| Tests | Error box renders, suggestion displays, non-fatal vs fatal, long message wrapping |
 
 ### Module: `src/ui/screens/stats.ts`
 
 | Property | Value |
 |----------|-------|
-| **Responsibility** | Render compact statistics with language breakdown. |
-| **Public API** | `renderStats(options, renderer)` |
-| **Internal helpers** | Language percentage calculation, column alignment |
-| **Must NOT know** | Animation, other screens, analysis pipeline |
-| **Tests** | All stats present, language breakdown, narrow terminal, no language data |
+| Responsibility | Render compact statistics with language breakdown. |
+| Public API | `renderStats(options, renderer)` |
+| Internal helpers | Language percentage calculation, column alignment |
+| Must NOT know | Animation, other screens, analysis pipeline |
+| Tests | All stats present, language breakdown, narrow terminal, no language data |
 
 ### Module: `src/ui/screens/help.ts`
 
 | Property | Value |
 |----------|-------|
-| **Responsibility** | Render the redesigned --help output replacing commander's default. |
-| **Public API** | `renderHelp(renderer, version)` |
-| **Internal helpers** | Section definitions (USAGE, ARGUMENTS, OPTIONS, EXAMPLES) |
-| **Must NOT know** | Animation, analysis data, other screens |
-| **Tests** | All sections present, version displayed, option details render, examples render |
+| Responsibility | Render the redesigned --help output replacing commander's default. |
+| Public API | `renderHelp(renderer, version)` |
+| Internal helpers | Section definitions (USAGE, ARGUMENTS, OPTIONS, EXAMPLES) |
+| Must NOT know | Animation, analysis data, other screens |
+| Tests | All sections present, version displayed, option details render, examples render |
 
 ### Module: `src/ui/index.ts` (UISession)
 
 | Property | Value |
 |----------|-------|
-| **Responsibility** | Top-level orchestrator. Creates Renderer + AnimationManager. Coordinates screen transitions. |
-| **Public API** | `createUISession(options) → UISession` with `start/finishScanning()`, `start/finishAnalyzing()`, `renderCompletion()`, `renderStats()`, `renderHelp()`, `reportError()`, `close()` |
-| **Internal helpers** | Creates Renderer, AnimationManager. Manages screen transition state. |
-| **Must NOT know** | Analysis pipeline internals, file system, commander |
-| **Tests** | Session creation, lifecycle methods, close cleanup, error reporting |
+| Responsibility | Top-level orchestrator. Creates Renderer + AnimationManager. Coordinates screen transitions. |
+| Public API | `createUISession(options) → UISession` with `start/finishScanning()`, `start/finishAnalyzing()`, `renderCompletion()`, `renderStats()`, `renderHelp()`, `reportError()`, `close()` |
+| Internal helpers | Creates Renderer, AnimationManager. Manages screen transition state. |
+| Must NOT know | Analysis pipeline internals, file system, commander |
+| Tests | Session creation, lifecycle methods, close cleanup, error reporting |
 
 ---
 
-## 4. Implementation Risks & Mitigations
+## 4. Implementation Risks & mitigations
 
 | Phase | Risk | Likelihood | Impact | Mitigation |
 |-------|------|------------|--------|------------|
@@ -1172,63 +1172,63 @@ Phase 13:
 
 ## 5. Milestones
 
-Every milestone leaves the repository in a **working, releasable state** — `npm run build` succeeds and all existing tests pass.
+Every milestone leaves the repository in a **working, releasable state**, `npm run build` succeeds and all existing tests pass.
 
 | # | Milestone | Phase | State After |
 |---|-----------|-------|-------------|
-| M1 | **Theme system complete** | 2 | New files under `src/ui/theme/` exist but aren't imported by anything. Build passes. All tests pass. |
-| M2 | **Utilities complete** | 3–5 | `ansi.ts`, `width.ts`, `animation/` exist but aren't connected. Build passes. All tests pass. |
-| M3 | **Primitives complete** | 6 | All 6 primitives exist and are testable independently. Build passes. All tests pass. |
-| M4 | **Renderer complete** | 7 | Renderer exists but isn't connected to CLI. Build passes. All tests pass. |
-| M5 | **Animations complete** | 8 | All 3 animation types exist. AnimationManager works. Not connected to CLI. Build passes. |
-| M6 | **Progress screens complete** | 9 | Scanning and analyzing screens exist. Build passes. All tests pass. |
-| M7 | **Output screens complete** | 10–11 | Completion, error, stats, help screens exist. Build passes. All tests pass. |
-| M8 | **CLI integration complete** | 12 | **v2.1 UI is live.** `repo-map` uses new UI. All existing tests pass. Build passes. |
-| M9 | **Full test coverage** | 13 | All 23 test files passing. Cross-platform verified. Final benchmarks done. |
-| **M10** | **v2.1 release candidate** | — | Tagged, benchmarked, documented. Ready for release. |
+| M1 | Theme system complete | 2 | New files under `src/ui/theme/` exist but aren't imported by anything. Build passes. All tests pass. |
+| M2 | Utilities complete | 3–5 | `ansi.ts`, `width.ts`, `animation/` exist but aren't connected. Build passes. All tests pass. |
+| M3 | Primitives complete | 6 | All 6 primitives exist and are testable independently. Build passes. All tests pass. |
+| M4 | Renderer complete | 7 | Renderer exists but isn't connected to CLI. Build passes. All tests pass. |
+| M5 | Animations complete | 8 | All 3 animation types exist. AnimationManager works. Not connected to CLI. Build passes. |
+| M6 | Progress screens complete | 9 | Scanning and analyzing screens exist. Build passes. All tests pass. |
+| M7 | Output screens complete | 10–11 | Completion, error, stats, help screens exist. Build passes. All tests pass. |
+| M8 | CLI integration complete | 12 | v2.1 UI is live. `repo-map` uses new UI. All existing tests pass. Build passes. |
+| M9 | Full test coverage | 13 | All 23 test files passing. Cross-platform verified. Final benchmarks done. |
+| M10 | v2.1 release candidate | — | Tagged, benchmarked, documented. Ready for release. |
 
 ---
 
-## 6. Final Execution Checklist
+## 6. Final execution checklist
 
 > When implementation begins, follow this checklist step by step.
 > After each step, run `npm run build` and `npm test` to verify the repository remains in a working state.
 
-### Phase 2 — Theme System (M1)
+### Phase 2: theme system (M1)
 
-- [ ] Create `src/ui/theme/symbols.ts` — define UNICODE_SYMBOLS and ASCII_SYMBOLS
-- [ ] Create `src/ui/theme/colors.ts` — detectColorMode(), resolveColor(), ANSI code tables
-- [ ] Create `src/ui/theme/borders.ts` — resolveBorder(), BorderChars for round/single/none
+- [ ] Create `src/ui/theme/symbols.ts`: define UNICODE_SYMBOLS and ASCII_SYMBOLS
+- [ ] Create `src/ui/theme/colors.ts`: detectColorMode(), resolveColor(), ANSI code tables
+- [ ] Create `src/ui/theme/borders.ts`: resolveBorder(), BorderChars for round/single/none
 - [ ] Create `src/ui/theme/presets/default.ts`
 - [ ] Create `src/ui/theme/presets/monochrome.ts`
 - [ ] Create `src/ui/theme/presets/high-contrast.ts`
 - [ ] Create `src/ui/theme/presets/minimal.ts`
-- [ ] Create `src/ui/theme/index.ts` — Theme interface, resolveTheme(), getTheme()
+- [ ] Create `src/ui/theme/index.ts`: Theme interface, resolveTheme(), getTheme()
 - [ ] Write `tests/ui/theme/colors.test.ts`
 - [ ] Write `tests/ui/theme/symbols.test.ts`
 - [ ] Write `tests/ui/theme/index.test.ts`
-- [ ] **MILESTONE M1:** `npm run build` passes, `npm test` passes
+- [ ] MILESTONE M1: `npm run build` passes, `npm test` passes
 
-### Phase 3 — ANSI Utilities (M2 part 1)
+### Phase 3: ANSI Utilities (M2 part 1)
 
-- [ ] Create `src/ui/utils/ansi.ts` — all cursor and line control functions
+- [ ] Create `src/ui/utils/ansi.ts`: all cursor and line control functions
 - [ ] Write `tests/ui/utils/ansi.test.ts`
-- [ ] **Verify:** `npm run build` passes, `npm test` passes
+- [ ] Verify: `npm run build` passes, `npm test` passes
 
-### Phase 4 — Layout Utilities (M2 part 2)
+### Phase 4: Layout Utilities (M2 part 2)
 
-- [ ] Create `src/ui/layout/width.ts` — getTerminalWidth(), setForcedWidth(), scaleColumns(), breakpoint()
+- [ ] Create `src/ui/layout/width.ts`: getTerminalWidth(), setForcedWidth(), scaleColumns(), breakpoint()
 - [ ] Write `tests/ui/layout/width.test.ts`
-- [ ] **MILESTONE M2:** `npm run build` passes, `npm test` passes
+- [ ] MILESTONE M2: `npm run build` passes, `npm test` passes
 
-### Phase 5 — Animation Types + Manager (M2 part 3)
+### Phase 5: Animation Types + Manager (M2 part 3)
 
-- [ ] Create `src/ui/animation/types.ts` — AnimationFrame, Animation interface
-- [ ] Create `src/ui/animation/index.ts` — AnimationManager class
+- [ ] Create `src/ui/animation/types.ts`: AnimationFrame, Animation interface
+- [ ] Create `src/ui/animation/index.ts`: AnimationManager class
 - [ ] Write `tests/ui/animation/index.test.ts`
-- [ ] **MILESTONE M2:** `npm run build` passes, `npm test` passes
+- [ ] MILESTONE M2: `npm run build` passes, `npm test` passes
 
-### Phase 6 — UI Primitives (M3)
+### Phase 6: UI primitives (M3)
 
 - [ ] Create `src/ui/primitives/text.ts`
 - [ ] Create `src/ui/primitives/divider.ts`
@@ -1243,15 +1243,15 @@ Every milestone leaves the repository in a **working, releasable state** — `np
 - [ ] Write `tests/ui/primitives/table.test.ts`
 - [ ] Write `tests/ui/primitives/list.test.ts`
 - [ ] Write `tests/ui/primitives/group.test.ts`
-- [ ] **MILESTONE M3:** `npm run build` passes, `npm test` passes
+- [ ] MILESTONE M3: `npm run build` passes, `npm test` passes
 
-### Phase 7 — Renderer (M4)
+### Phase 7: renderer (M4)
 
-- [ ] Create `src/ui/renderer.ts` — Renderer class
+- [ ] Create `src/ui/renderer.ts`: Renderer class
 - [ ] Write `tests/ui/renderer.test.ts`
-- [ ] **MILESTONE M4:** `npm run build` passes, `npm test` passes
+- [ ] MILESTONE M4: `npm run build` passes, `npm test` passes
 
-### Phase 8 — Animation Implementations (M5)
+### Phase 8: animation Implementations (M5)
 
 - [ ] Create `src/ui/animation/spinner.ts`
 - [ ] Create `src/ui/animation/progress-bar.ts`
@@ -1259,23 +1259,23 @@ Every milestone leaves the repository in a **working, releasable state** — `np
 - [ ] Write `tests/ui/animation/spinner.test.ts`
 - [ ] Write `tests/ui/animation/progress-bar.test.ts`
 - [ ] Write `tests/ui/animation/eta.test.ts`
-- [ ] **MILESTONE M5:** `npm run build` passes, `npm test` passes
+- [ ] MILESTONE M5: `npm run build` passes, `npm test` passes
 
-### Phase 9 — Progress Pipeline (M6)
+### Phase 9: progress pipeline (M6)
 
 - [ ] Create `src/ui/screens/scanning.ts`
 - [ ] Create `src/ui/screens/analyzing.ts`
 - [ ] Write `tests/ui/screens/scanning.test.ts`
 - [ ] Write `tests/ui/screens/analyzing.test.ts`
-- [ ] **MILESTONE M6:** `npm run build` passes, `npm test` passes
+- [ ] MILESTONE M6: `npm run build` passes, `npm test` passes
 
-### Phase 10 — Completion Screen (M7 part 1)
+### Phase 10: Completion Screen (M7 part 1)
 
 - [ ] Create `src/ui/screens/completion.ts`
 - [ ] Write `tests/ui/screens/completion.test.ts`
-- [ ] **Verify:** `npm run build` passes, `npm test` passes
+- [ ] Verify: `npm run build` passes, `npm test` passes
 
-### Phase 11 — Error, Stats, Help Screens (M7 part 2)
+### Phase 11: Error, Stats, Help Screens (M7 part 2)
 
 - [ ] Create `src/ui/screens/error.ts`
 - [ ] Create `src/ui/screens/stats.ts`
@@ -1283,31 +1283,31 @@ Every milestone leaves the repository in a **working, releasable state** — `np
 - [ ] Write `tests/ui/screens/error.test.ts`
 - [ ] Write `tests/ui/screens/stats.test.ts`
 - [ ] Write `tests/ui/screens/help.test.ts`
-- [ ] **MILESTONE M7:** `npm run build` passes, `npm test` passes
+- [ ] MILESTONE M7: `npm run build` passes, `npm test` passes
 
-### Phase 12 — CLI Integration (M8)
+### Phase 12: CLI integration (M8)
 
-- [ ] Create `src/ui/index.ts` — createUISession(), UISession class
-- [ ] Modify `src/index.ts` — replace raw stderr writes with UISession calls
-- [ ] Modify `src/bin.ts` — replace raw error writes with renderError()
+- [ ] Create `src/ui/index.ts`: createUISession(), UISession class
+- [ ] Modify `src/index.ts`: replace raw stderr writes with UISession calls
+- [ ] Modify `src/bin.ts`: replace raw error writes with renderError()
 - [ ] Write `tests/ui/index.test.ts`
-- [ ] **Manual verification:** Run `npm run dev -- .` — verify scanning animation + completion screen
-- [ ] **Manual verification:** Run `npm run dev -- . --no-color` — verify no ANSI codes
-- [ ] **Manual verification:** Run `npm run dev -- --help` — verify new help screen
-- [ ] **Manual verification:** Run `npm run dev -- /nonexistent` — verify error screen
-- [ ] **MILESTONE M8:** `npm run build` passes, `npm test` passes. v2.1 UI is live.
+- [ ] Manual verification: Run `npm run dev -- .`, verify scanning animation + completion screen
+- [ ] Manual verification: Run `npm run dev -- . --no-color`, verify no ANSI codes
+- [ ] Manual verification: Run `npm run dev -- --help`, verify new help screen
+- [ ] Manual verification: Run `npm run dev -- /nonexistent`, verify error screen
+- [ ] MILESTONE M8: `npm run build` passes, `npm test` passes. v2.1 UI is live.
 
-### Phase 13 — Tests + Polish (M9)
+### Phase 13: tests + polish (M9)
 
 - [ ] Verify all 23 test files are complete and passing
-- [ ] Run `npm run build -- --noEmit` (type-only check) — verify no type errors
-- [ ] Run `npm run lint` — verify no lint errors
+- [ ] Run `npm run build -- --noEmit` (type-only check), verify no type errors
+- [ ] Run `npm run lint`: verify no lint errors
 - [ ] Verify `--no-color` produces zero ANSI sequences: `node dist/bin.js . --no-color | grep -c $'\x1b'` → 0
-- [ ] Verify help output: `npm run dev -- --help | head -5` — shows new help screen
-- [ ] Verify stats output: `npm run dev -- . --stats` — shows stats screen
-- [ ] Verify SIGINT cleanup: Start scanning, press Ctrl+C — cursor is restored, no orphaned ANSI
-- [ ] Benchmark: run 10× `node dist/bin.js . --json > /dev/null` — no regression vs v2.0
-- [ ] **MILESTONE M9:** All tests pass, all manual verifications pass.
+- [ ] Verify help output: `npm run dev -- --help | head -5`, shows new help screen
+- [ ] Verify stats output: `npm run dev -- . --stats`, shows stats screen
+- [ ] Verify SIGINT cleanup: Start scanning, press Ctrl+C, cursor is restored, no orphaned ANSI
+- [ ] Benchmark: run 10× `node dist/bin.js . --json > /dev/null`. No regression vs v2.0
+- [ ] MILESTONE M9: All tests pass, all manual verifications pass.
 
 ### Release (M10)
 
@@ -1315,11 +1315,11 @@ Every milestone leaves the repository in a **working, releasable state** — `np
 - [ ] Update `README.md` with any new CLI behavior
 - [ ] Update `CHANGELOG.md`
 - [ ] Tag release
-- [ ] **MILESTONE M10:** v2.1 released.
+- [ ] MILESTONE M10: v2.1 released.
 
 ---
 
-## 7. Summary Statistics
+## 7. Summary statistics
 
 | Metric | Value |
 |--------|-------|

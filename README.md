@@ -5,14 +5,14 @@
 
 # repo-map
 
-**Scan any codebase. Reveal its architecture, health score, technology stack, and actionable improvement suggestions — in one command.**
+**Scan any codebase. Reveal its architecture, health score, technology stack, and actionable improvement suggestions, in one command.**
 
 [![npm version](https://img.shields.io/npm/v/@p4inz-code/repo-map?color=blue&label=npm)](https://www.npmjs.com/package/@p4inz-code/repo-map)
 [![CI](https://github.com/p4inz-code/repo-map/actions/workflows/ci.yml/badge.svg)](https://github.com/p4inz-code/repo-map/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![Node](https://img.shields.io/badge/node-%3E%3D18-brightgreen)](https://nodejs.org)
 
-TypeScript · JavaScript · Python · Go · Rust · Java · C# · C++ — 80+ languages, frameworks, and tools detected automatically.
+TypeScript · JavaScript · Python · Go · Rust · Java · C# · C++: 80+ languages, frameworks, and tools detected automatically.
 
 ```bash
 npm i -g @p4inz-code/repo-map
@@ -23,7 +23,7 @@ Zero configuration. One command. Full insight.
 
 ---
 
-## Quick Start
+## Quick start
 
 ```bash
 npm i -g @p4inz-code/repo-map
@@ -39,7 +39,7 @@ npx @p4inz-code/repo-map .
 
 **Requirements:** Node.js 18+. Zero native dependencies (only `commander` + `ignore`).
 
-### The Dashboard
+### The dashboard
 
 The default output answers: *What kind of project is this?*
 
@@ -59,11 +59,11 @@ The default output answers: *What kind of project is this?*
 ╰────────────────────────────────────────────────────────────────╯
 ```
 
-Four elements, one scan: **Classification** (what is it?), **Health** (0–100 score), **Metrics** (size), **Languages** (what it's built with).
+Four elements, one scan: **Classification** (what is it?), Health (0-100 score), Metrics (size), Languages (what it's built with).
 
 ---
 
-## CLI Reference
+## CLI reference
 
 | Command | Description |
 |---------|-------------|
@@ -87,20 +87,20 @@ Run `repo-map --help` for full documentation.
 
 ## What's New in v3.0
 
-- **Complete V3 Runtime rewrite** — New deterministic frame pipeline with AnimationScheduler, ScrollingEngine, DoubleBuffer, and DiffEngine
-- **Cinematic startup sequence** — Animated logo reveal, progressive workspace reveal, reduced-motion support
-- **Command Palette (Ctrl+K)** — Raycast-inspired palette with fuzzy search, recent commands, pinned favorites
-- **Incremental Search (Ctrl+F)** — Live filtering with match highlighting, scroll-to-result, history preservation
-- **Smooth scrolling** — PageUp/PageDown/Home/End with eased interpolation, scrollbar fade, edge shadows
-- **Context-aware keyboard hints** — Dynamic status bar hints that update based on current screen, palette, and search state
-- **Accessibility Manager** — Reduced motion mode (changes duration, not lifecycle), high contrast, no-color support
-- **Interactive workspace improvements** — Sidebar motion gliding, animated metric counters, micro-interactions
-- **Notification System** — Queued notifications with severity levels, auto-dismiss
-- **870+ automated tests** — Full coverage across all screens, animations, themes, and edge cases
+- Complete V3 Runtime rewrite: New deterministic frame pipeline with AnimationScheduler, ScrollingEngine, DoubleBuffer, and DiffEngine
+- Cinematic startup sequence: Animated logo reveal, progressive workspace reveal, reduced-motion support
+- Command Palette (Ctrl+K): Raycast-inspired palette with fuzzy search, recent commands, pinned favorites
+- Incremental Search (Ctrl+F): Live filtering with match highlighting, scroll-to-result, history preservation
+- Smooth scrolling: PageUp/PageDown/Home/End with eased interpolation, scrollbar fade, edge shadows
+- Context-aware keyboard hints: Dynamic status bar hints that update based on current screen, palette, and search state
+- Accessibility Manager: Reduced motion mode (changes duration, not lifecycle), high contrast, no-color support
+- Interactive workspace improvements: Sidebar motion gliding, animated metric counters, micro-interactions
+- Notification System: Queued notifications with severity levels, auto-dismiss
+- 870+ automated tests: Full coverage across all screens, animations, themes, and edge cases
 
 ---
 
-## Interactive Workspace
+## Interactive workspace
 
 ```bash
 repo-map . --interactive
@@ -155,18 +155,18 @@ repo-map — Interactive Workspace                   v3.0.0
 ### Regions
 
 The workspace is divided into four focusable regions:
-- **Sidebar** — View selection (Overview, Statistics, Suggestions, Repository Tree, Help)
-- **Tree** — Interactive file explorer with expand/collapse
-- **Info Panel** — Contextual details about selected items
-- **Footer** — Keyboard shortcut hints
+- Sidebar: View selection (Overview, Statistics, Suggestions, Repository Tree, Help)
+- Tree: Interactive file explorer with expand/collapse
+- Info Panel: Contextual details about selected items
+- Footer: Keyboard shortcut hints
 
-### Command Palette
+### Command palette
 
 Press `Ctrl+P` to open the command palette for quick actions: navigate to views, focus regions, expand/collapse all, or quit.
 
 ---
 
-## Example Outputs
+## Example outputs
 
 ### Stats (`repo-map --stats`)
 
@@ -233,29 +233,29 @@ Press `Ctrl+P` to open the command palette for quick actions: navigate to views,
 
 ---
 
-## Architecture Analysis
+## Architecture analysis
 
 When run against a codebase with source files, repo-map performs deep architecture analysis:
 
 | Metric | Description |
 |--------|-------------|
-| **Architecture Patterns** | Detects layered, MVC, hexagonal, feature-based, event-driven |
-| **Dependency Graph** | Maps internal module dependencies, identifies central/hub/leaf modules |
-| **Circular Dependencies** | DFS-based cycle detection with severity and remediation |
-| **Architecture Smells** | God modules, large utility folders, feature leakage, nesting |
-| **File Complexity** | Calculated from size, import/export count, function count |
-| **Coupling** | Average incoming/outgoing dependencies per module |
-| **Cohesion** | Intra-directory vs inter-directory import ratios |
-| **Layer Violations** | Cross-layer dependency violations |
-| **Quality Score** | Composite 0–100 across coupling, cohesion, layering, organization |
-| **Risk Report** | Technical debt, maintainability, scalability, onboarding risk |
-| **Refactor Suggestions** | Actionable recommendations with impact/effort estimates |
+| Architecture Patterns | Detects layered, MVC, hexagonal, feature-based, event-driven |
+| Dependency Graph | Maps internal module dependencies, identifies central/hub/leaf modules |
+| Circular Dependencies | DFS-based cycle detection with severity and remediation |
+| Architecture Smells | God modules, large utility folders, feature leakage, nesting |
+| File Complexity | Calculated from size, import/export count, function count |
+| Coupling | Average incoming/outgoing dependencies per module |
+| Cohesion | Intra-directory vs inter-directory import ratios |
+| Layer Violations | Cross-layer dependency violations |
+| Quality Score | Composite 0–100 across coupling, cohesion, layering, organization |
+| Risk Report | Technical debt, maintainability, scalability, onboarding risk |
+| Refactor Suggestions | Actionable recommendations with impact/effort estimates |
 
 See [docs/architecture.md](docs/architecture.md) for full details.
 
 ---
 
-## Technology Detection
+## Technology detection
 
 ### Languages (30+)
 TypeScript, JavaScript, Python, Java, Kotlin, C, C++, C#, Rust, Go, PHP, Ruby, Swift, Dart, HTML, CSS, SCSS, Less, SQL, Shell, PowerShell, YAML, TOML, JSON, Markdown, Vue, Svelte, Astro, Docker, Make, CMake, Elixir, Erlang, Haskell, Clojure, F#, Scala, R, Lua, Zig, Nim, Perl, Terraform, GraphQL, Prisma, Protocol Buffers, LaTeX, Solidity, INI, Batch, Environment Variables
@@ -279,34 +279,34 @@ GitHub Actions, GitLab CI, Jenkins, Docker, Docker Compose, Vite, Webpack, Rollu
 Benchmarks on Apple M1 with Node.js 20. Results vary with hardware and filesystem.
 
 Why repo-map is fast:
-- **Single filesystem walk** — Metadata cached, never re-read
-- **Binary detection** — Extension + null-byte heuristic, no full file reads
-- **Large file skip** — Files over 50 MB excluded automatically
-- **Shared cache** — File content cache shared across all analysis passes
+- Single filesystem walk: Metadata cached, never re-read
+- Binary detection: Extension + null-byte heuristic, no full file reads
+- Large file skip: Files over 50 MB excluded automatically
+- Shared cache: File content cache shared across all analysis passes
 
 ---
 
-## How It Works
+## How it works
 
 ```
 CLI Args → Scan (1 walk) → Analyze (cached passes) → Format → Output
 ```
 
-1. **Scan** — Walk the directory tree once, applying `.gitignore`, exclude, and include filters. Binary files, symlinks, and files over 50 MB handled gracefully.
-2. **Analyze** — Run all analysis passes against cached metadata: technology detection, classification, maturity estimation, health scoring, architecture analysis. No file read twice.
-3. **Format** — Output as Markdown audit report, stable JSON, or compact statistics.
+1. Scan: Walk the directory tree once, applying `.gitignore`, exclude, and include filters. Binary files, symlinks, and files over 50 MB handled gracefully.
+2. Analyze: Run all analysis passes against cached metadata: technology detection, classification, maturity estimation, health scoring, architecture analysis. No file read twice.
+3. Format: Output as Markdown audit report, stable JSON, or compact statistics.
 
 ---
 
-## CI Integration
+## CI integration
 
 ```bash
 repo-map --json --no-color
 ```
 
-Produces deterministic, machine-readable output. The JSON schema is versioned (`1.0.0`) and stable — fields may be added in minor versions but never removed or renamed without a major bump.
+Produces deterministic, machine-readable output. The JSON schema is versioned (`1.0.0`) and stable, fields may be added in minor versions but never removed or renamed without a major bump.
 
-### Piped / Non-TTY Output
+### Piped / non-TTY output
 
 repo-map disables animations and color when stdout is not a terminal. Same input always produces identical output.
 
@@ -316,25 +316,25 @@ Defaults to respecting `.gitignore`. Use `--no-ignore` to include all files. Bin
 
 ---
 
-## Error Recovery
+## Error recovery
 
 repo-map handles these conditions without crashing:
-- Permission denied — skipped with warning
-- Broken symlinks — detected and skipped
-- Invalid encoding — non-UTF-8 detected via null-byte check
-- Large files (> 50 MB) — skipped to prevent OOM
-- Malformed JSON in config files — parsed with graceful fallback
-- SIGINT — graceful interruption (press Ctrl+C twice to force exit)
+- Permission denied: skipped with warning
+- Broken symlinks: detected and skipped
+- Invalid encoding: non-UTF-8 detected via null-byte check
+- Large files (> 50 MB), skipped to prevent OOM
+- Malformed JSON in config files, parsed with graceful fallback
+- SIGINT: graceful interruption (press Ctrl+C twice to force exit)
 
 ---
 
-## Who It's For
+## Who it's for
 
-- **Individual developers** — Understand a new codebase in seconds
-- **Open-source contributors** — Find where to start before opening a PR
-- **Engineering teams** — Run architecture audits and track health over time
-- **AI-assisted development** — Feed structured JSON to LLMs and coding agents
-- **Technical writers** — Generate documentation scaffolding from real project structure
+- Individual developers: Understand a new codebase in seconds
+- Open-source contributors: Find where to start before opening a PR
+- Engineering teams: Run architecture audits and track health over time
+- AI-assisted development: Feed structured JSON to LLMs and coding agents
+- Technical writers: Generate documentation scaffolding from real project structure
 
 ---
 
@@ -348,10 +348,10 @@ npm test
 ```
 
 Standards:
-- **870+ automated tests** — all must pass before merge
-- **Strict TypeScript** — no `any`, full type safety
-- **ESM-first** — native ES modules with `.js` extensions
-- **Product Identity spec** — [docs/design/PRODUCT_IDENTITY_V2.2.md](docs/design/PRODUCT_IDENTITY_V2.2.md) governs all UI changes
+- 870+ automated tests: all must pass before merge
+- Strict TypeScript: no `any`, full type safety
+- ESM-first: native ES modules with `.js` extensions
+- Product Identity spec: [docs/design/PRODUCT_IDENTITY_V2.2.md](docs/design/PRODUCT_IDENTITY_V2.2.md) governs all UI changes
 
 Run `npx tsx scripts/analyze-self.ts` to scan repo-map with itself.
 
@@ -367,7 +367,7 @@ Run `npx tsx scripts/analyze-self.ts` to scan repo-map with itself.
 
 **Is the JSON output stable?** Yes. Versioned schema (`1.0.0`). Fields may be added but never removed without a major version.
 
-**How does this compare to `tree` or `cloc`?** `tree` shows structure. `cloc` counts lines. repo-map shows structure, tech stack, health scores, architecture analysis, and improvement suggestions — all in one command.
+**How does this compare to `tree` or `cloc`?** `tree` shows structure. `cloc` counts lines. repo-map shows structure, tech stack, health scores, architecture analysis, and improvement suggestions. All in one command.
 
 ---
 
@@ -381,12 +381,12 @@ In the meantime, run `repo-map .` to see the dashboard, `repo-map . --stats` for
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT, see [LICENSE](LICENSE).
 
 ## Acknowledgements
 
-- [Commander.js](https://github.com/tj/commander.js) — CLI framework
-- [ignore](https://github.com/kaelzhang/node-ignore) — .gitignore support
+- [Commander.js](https://github.com/tj/commander.js): CLI framework
+- [ignore](https://github.com/kaelzhang/node-ignore): .gitignore support
 
 ---
 

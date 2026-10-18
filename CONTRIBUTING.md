@@ -22,7 +22,7 @@ npm install
 | `npm run format` | Format code with Prettier |
 | `npm run benchmark` | Run performance benchmarks |
 
-## Code Standards
+## Code standards
 
 ### TypeScript
 
@@ -47,7 +47,7 @@ npm install
 - No scope expansion without discussion
 - Minimal dependencies (currently: `commander`, `ignore` only)
 
-### UI Changes
+### UI changes
 
 All UI changes must conform to the Product Identity specification:
 
@@ -61,7 +61,7 @@ Key rules:
 - Graceful degradation for narrow terminals (CLI Law 17)
 - Accessible by default (CLI Law 18)
 
-## Pull Request Process
+## Pull request process
 
 1. Fork the repository and create a feature branch
 2. Make your changes following the code standards above
@@ -71,7 +71,7 @@ Key rules:
 6. Update documentation if your change affects user-facing behavior
 7. Submit a pull request with a clear description of the change
 
-### Commit Messages
+### Commit messages
 
 Use clear, descriptive commit messages:
 
@@ -81,7 +81,7 @@ Use clear, descriptive commit messages:
 - `test: add edge case tests for narrow terminal rendering`
 - `refactor: extract shared label-value pattern to utility`
 
-## Architecture Documentation
+## Architecture documentation
 
 For detailed system design, see:
 
@@ -95,7 +95,7 @@ npx tsx scripts/analyze-self.ts
 
 This scans the repo-map repository with repo-map, which is useful for validating the analysis pipeline.
 
-## Reporting Issues
+## Reporting issues
 
 When reporting bugs, please include:
 

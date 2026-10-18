@@ -1,13 +1,13 @@
-# Security Policy
+# Security policy
 
-## Supported Versions
+## Supported versions
 
 | Version | Supported |
 |---------|-----------|
-| 3.0.x   | ✅ Yes    |
-| < 3.0   | ❌ No     |
+| 3.0.x   | Yes    |
+| < 3.0   | No     |
 
-## Reporting a Vulnerability
+## Reporting a vulnerability
 
 If you discover a security vulnerability in repo-map, please report it responsibly.
 
@@ -39,22 +39,22 @@ repo-map reads the local filesystem only. It does not:
 - Modify, create, or delete files
 - Execute arbitrary code from scanned repositories
 
-### Binary Handling
+### Binary handling
 
 - Files over 50 MB are automatically skipped to prevent memory exhaustion
 - Binary files are detected via extension and null-byte heuristic
 - Symlinks are followed but cycles are detected and broken
 
-### Dependency Policy
+### Dependency policy
 
 repo-map maintains minimal dependencies:
 
-- `commander` — CLI argument parsing
-- `ignore` — `.gitignore` pattern matching
+- `commander`: CLI argument parsing
+- `ignore`: `.gitignore` pattern matching
 
 Both are well-maintained, widely-used packages with established security track records.
 
-### Output Safety
+### Output safety
 
 - Output is plain text or JSON. No HTML, no script injection vectors.
 - Terminal output uses ANSI escape codes for styling only

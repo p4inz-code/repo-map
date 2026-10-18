@@ -1,4 +1,4 @@
-# CLI Design System — repo-map v2.1
+# CLI Design System: repo-map v2.1
 
 > Single source of truth for all terminal UI decisions.
 > Every component, screen, and animation derives from this specification.
@@ -12,56 +12,56 @@ repo-map is a **professional analysis tool** used by developers in CI pipelines,
 
 The CLI experience must reflect the same rigor as the analysis engine.
 
-### Core Values
+### Core values
 
 | Value | Meaning |
 |-------|---------|
-| **Premium** | Every pixel (character) is intentional. No visual noise. |
-| **Calm** | The interface recedes. Data is the focus. |
-| **Minimal** | If it doesn't serve the user's goal, remove it. |
-| **Trustworthy** | Never imply certainty when data is uncertain. |
-| **Responsive** | Feedback within 100ms. Always show progress. |
-| **Professional** | Suitable for screenshots in documentation, presentations, and CI logs. |
+| Premium | Every pixel (character) is intentional. No visual noise. |
+| Calm | The interface recedes. Data is the focus. |
+| Minimal | If it doesn't serve the user's goal, remove it. |
+| Trustworthy | Never imply certainty when data is uncertain. |
+| Responsive | Feedback within 100ms. Always show progress. |
+| Professional | Suitable for screenshots in documentation, presentations, and CI logs. |
 
-### Anti-Values (Never)
+### Anti-Values (never)
 
-- **Never** use emoji as decoration or status indicators
-- **Never** use ASCII art or decorative flourishes
-- **Never** animate purely for delight — all animation communicates state
-- **Never** print celebratory messages ("Awesome!", "Great job!")
-- **Never** use random/varied output — deterministic output builds trust
+- Never use emoji as decoration or status indicators
+- Never use ASCII art or decorative flourishes
+- Never animate purely for delight. All animation communicates state
+- Never print celebratory messages ("Awesome!", "Great job!")
+- Never use random/varied output: deterministic output builds trust
 
 ### References
 
 The following tools embody the quality standard we match or exceed:
 
-- **FreeBuff** — Terminal UI polish, calm information density
-- **Bun** — Clean error messages, fast feedback, no noise
-- **GitHub CLI (`gh`)** — Professional help output, consistent structure
-- **Vercel CLI** — Minimal progress indicators, premium feel
-- **Warp** — Terminal experience design
-- **LazyGit** — Information-dense but navigable TUI patterns
+- FreeBuff: Terminal UI polish, calm information density
+- Bun: Clean error messages, fast feedback, no noise
+- GitHub CLI (`gh`): Professional help output, consistent structure
+- Vercel CLI: Minimal progress indicators, premium feel
+- Warp: Terminal experience design
+- LazyGit: Information-dense but navigable TUI patterns
 
 ---
 
-## 2. Visual Identity
+## 2. Visual identity
 
-### Character Grid
+### Character grid
 
 The terminal is a grid of character cells. Everything we render occupies cells in this grid.
 
-- **No overlap**: Two UI elements never occupy the same cell
-- **No partial cells**: Every element aligns to the character grid
-- **No variable-width characters**: All symbols used are monospace-friendly
+- No overlap: Two UI elements never occupy the same cell
+- No partial cells: Every element aligns to the character grid
+- No variable-width characters: All symbols used are monospace-friendly
 
 ### Layout Principles
 
-- **Content width**: `min(terminal.columns - 4, 100)` — content never spans the full terminal width on wide displays (reduces eye travel)
-- **Margins**: 2-character left margin on each line of content (except box borders)
-- **Vertical rhythm**: 1 blank line between related sections, 2 blank lines between major sections
-- **No right-column overhang**: All lines are either truncated or wrapped to content width
+- Content width: `min(terminal.columns - 4, 100)`: content never spans the full terminal width on wide displays (reduces eye travel)
+- Margins: 2-character left margin on each line of content (except box borders)
+- Vertical rhythm: 1 blank line between related sections, 2 blank lines between major sections
+- No right-column overhang: All lines are either truncated or wrapped to content width
 
-### Information Hierarchy
+### Information hierarchy
 
 ```
 1. Status indicators       (spinner, progress bar)
@@ -75,9 +75,9 @@ Each level is visually distinct through: position (top to bottom), color (accent
 
 ---
 
-## 3. Color Palette
+## 3. Color palette
 
-### Semantic Colors
+### Semantic colors
 
 | Token | ANSI 16 | ANSI 256 | Hex (TrueColor) | Usage |
 |-------|---------|----------|-----------------|-------|
@@ -91,7 +91,7 @@ Each level is visually distinct through: position (top to bottom), color (accent
 | `text` | Default (0) | 15 | `#ffffff` | Primary body text |
 | `bg` | — | 235 | `#262626` | Background accent (box fill) |
 
-### Color Mode Detection
+### Color mode detection
 
 ```typescript
 type ColorMode = 'none' | '16' | '256' | 'truecolor';
@@ -106,7 +106,7 @@ Detection order:
 6. Platform is Windows Terminal (`WT_SESSION`) → `'truecolor'`
 7. Fallback → `'16'`
 
-### Fallback Rules
+### Fallback rules
 
 - `'none'`: All color functions return empty strings. No ANSI escapes emitted.
 - `'16'`: Use ANSI 16 codes only (bold/bright variants for emphasis).
@@ -121,11 +121,11 @@ Detection order:
 
 We do not control the terminal font. However, we assume:
 
-- **Monospace font** with consistent character width
-- **ASCII + common Unicode** support (U+2500–257F box drawing, U+2190–21FF arrows, U+2580–259F block elements)
-- **No ligatures** — each character is one cell wide
+- Monospace font with consistent character width
+- ASCII + common Unicode support (U+2500-257F box drawing, U+2190-21FF arrows, U+2580-259F block elements)
+- No ligatures: each character is one cell wide
 
-### Text Styles
+### Text styles
 
 | Style | ANSI Code | Usage |
 |-------|-----------|-------|
@@ -134,16 +134,16 @@ We do not control the terminal font. However, we assume:
 | Dim | `\x1b[2m` | Metadata, secondary info, hints |
 | Bold+Color | Combined | Status indicators, important values |
 
-### Weights & Emphasis
+### Weights & emphasis
 
-- **Section headers**: Bold + primary color
-- **Labels**: Bold, default color
-- **Values**: Normal weight, default color
-- **Metadata**: Dim
-- **Errors**: Bold + error color
-- **Success**: Bold + success color
+- Section headers: Bold + primary color
+- Labels: Bold, default color
+- Values: Normal weight, default color
+- Metadata: Dim
+- Errors: Bold + error color
+- Success: Bold + success color
 
-### Wrapping Rules
+### Wrapping rules
 
 - Words are never broken (no mid-word hyphenation)
 - If a word exceeds content width, it is truncated with `…` appended
@@ -152,9 +152,9 @@ We do not control the terminal font. However, we assume:
 
 ---
 
-## 5. Icon System
+## 5. Icon system
 
-### Symbol Set
+### Symbol set
 
 We use a curated Unicode symbol set. No emoji. No decorative ASCII art.
 
@@ -171,7 +171,7 @@ We use a curated Unicode symbol set. No emoji. No decorative ASCII art.
 | `arrowDown` | `↓` (U+2193) | `v` | Decrease, negative trend |
 | `separator` | `─` (U+2500) | `-` | Horizontal divider |
 
-### Box-Drawing Characters
+### Box-Drawing characters
 
 | Token | Unicode | Fallback (ASCII) | Usage |
 |-------|---------|------------------|-------|
@@ -186,40 +186,40 @@ We use a curated Unicode symbol set. No emoji. No decorative ASCII art.
 | `h` | `─` (U+2500) | `-` | Horizontal line |
 | `v` | `│` (U+2502) | `\|` | Vertical line |
 
-### Progress Characters
+### Progress characters
 
 | Token | Unicode | Fallback (ASCII) | Usage |
 |-------|---------|------------------|-------|
 | `filled` | `█` (U+2588) | `#` | Filled progress bar segment |
 | `empty` | `░` (U+2591) | `.` | Empty progress bar segment |
 
-### Unicode Fallback
+### Unicode fallback
 
 Unicode support is detected by platform and terminal:
 
-- **Windows CMD** (no `WT_SESSION`): Use ASCII fallbacks
-- **CI/Pipe** (not a TTY): Use ASCII fallbacks
-- **All other terminals**: Full Unicode
+- Windows CMD (no `WT_SESSION`): Use ASCII fallbacks
+- CI/Pipe (not a TTY): Use ASCII fallbacks
+- All other terminals: Full Unicode
 
 ---
 
-## 6. Border Styles
+## 6. Border styles
 
-### Style Definitions
+### Style definitions
 
 | Style | Corners | Horizontal | Vertical | Usage |
 |-------|---------|------------|----------|-------|
-| `round` | `╭╮╰╯` | `─` | `│` | Default — completion screen, errors |
+| `round` | `╭╮╰╯` | `─` | `│` | Default, completion screen, errors |
 | `single` | `┌┐└┘` | `─` | `│` | Fallback when round unavailable |
 | `none` | — | — | — | Narrow terminals, inline content |
 
-### Box Padding
+### Box padding
 
-- Internal padding: **1 character** (left and right)
-- Minimum box width: **20 characters** (content + borders + padding)
-- Maximum box width: **content width** (determined by layout engine)
+- Internal padding: 1 character (left and right)
+- Minimum box width: 20 characters (content + borders + padding)
+- Maximum box width: content width (determined by layout engine)
 
-### Divider Rules
+### Divider rules
 
 - Full-width horizontal rule: `contentWidth` repetitions of `─`
 - With centered label: `─ label ─` with remaining width filled on both sides
@@ -227,7 +227,7 @@ Unicode support is detected by platform and terminal:
 
 ---
 
-## 7. Spacing Scale
+## 7. Spacing scale
 
 All spacing is defined in character cells (vertical lines / horizontal columns).
 
@@ -240,14 +240,14 @@ All spacing is defined in character cells (vertical lines / horizontal columns).
 | `lg` | 2 | Between major sections |
 | `xl` | 2 | Before and after box borders |
 
-### Padding Rules
+### Padding rules
 
-- **Left margin**: 2 spaces on all content lines (except box border lines)
-- **Internal box padding**: 1 space on each side of content
-- **Table cell padding**: 1 space on each side of content, minimum
-- **Column gap**: 2 spaces between columns
+- Left margin: 2 spaces on all content lines (except box border lines)
+- Internal box padding: 1 space on each side of content
+- Table cell padding: 1 space on each side of content, minimum
+- Column gap: 2 spaces between columns
 
-### Width Behavior
+### Width behavior
 
 | Terminal Width | Behavior |
 |---------------|----------|
@@ -260,22 +260,22 @@ All spacing is defined in character cells (vertical lines / horizontal columns).
 
 ## 8. Animation Principles
 
-### When to Animate
+### When to animate
 
 | Scenario | Animation | Rationale |
 |----------|-----------|-----------|
-| Scanning | Spinner + "Scanning project..." | User waits — feedback required |
+| Scanning | Spinner + "Scanning project..." | User waits, feedback required |
 | Analyzing | Spinner + "Analyzing..." | No deterministic progress available |
 | Progress known | Progress bar | Shows completion percentage |
 | Indeterminate wait | Pulse/ellipsis | Shows activity without false precision |
-| Completion | Instant render | No animation on final output — it's data, not a reveal |
+| Completion | Instant render | No animation on final output, it's data, not a reveal |
 
-### When NOT to Animate
+### When NOT to animate
 
-- **Final output** — never fade-in, slide, or reveal results
-- **Error messages** — rendered instantly, no transitions
-- **Help text** — static content rendered immediately
-- **During pipe/CI** — all animations disabled
+- Final output: never fade-in, slide, or reveal results
+- Error messages: rendered instantly, no transitions
+- Help text: static content rendered immediately
+- During pipe/CI: all animations disabled
 
 ### Frame Rates
 
@@ -284,9 +284,9 @@ All spacing is defined in character cells (vertical lines / horizontal columns).
 | Default | 80ms (12.5 FPS) | Smooth enough for visual feedback, low CPU |
 | Narrow terminal | 100ms (10 FPS) | Reduces visual noise on limited space |
 | Windows (non-WT) | 120ms (~8 FPS) | Console I/O is slower on legacy Windows |
-| CI/Pipe | ∞ (static) | No TTY — no animation possible |
+| CI/Pipe | ∞ (static) | No TTY, no animation possible |
 
-### Graceful Degradation
+### Graceful degradation
 
 1. If `NO_COLOR` is set → no color, no animation
 2. If not a TTY → no animation, plain text
@@ -303,12 +303,12 @@ All spacing is defined in character cells (vertical lines / horizontal columns).
 - Layout, spacing, and hierarchy remain identical
 - Symbols and borders remain (color is a layer on top, not the only signal)
 
-### Narrow Terminals
+### Narrow terminals
 
-- Minimum supported width: **30 columns**
+- Minimum supported width: 30 columns
 - Below 30 columns: Warning message suggesting wider terminal
-- 30–50 columns: Compact mode — reduced padding, no boxes, stacked layout
-- Content is never lost due to width — text wraps or truncates with `…`
+- 30-50 columns: Compact mode: reduced padding, no boxes, stacked layout
+- Content is never lost due to width, text wraps or truncates with `…`
 
 ### Screen Readers
 
@@ -323,7 +323,7 @@ All spacing is defined in character cells (vertical lines / horizontal columns).
 
 ---
 
-## 10. Component Examples
+## 10. Component examples
 
 ### Example 1: Completion Screen (80-col terminal)
 
@@ -351,7 +351,7 @@ All spacing is defined in character cells (vertical lines / horizontal columns).
 Output written to architecture.md
 ```
 
-### Example 2: Error Screen
+### Example 2: error screen
 
 ```
 ╭─ Error ────────────────────────────────────────────╮
@@ -364,7 +364,7 @@ Output written to architecture.md
 ╰───────────────────────────────────────────────────────╯
 ```
 
-### Example 3: Stats Output
+### Example 3: stats output
 
 ```
 ╭─ repo-map · stats ─────────────────────────────────╮
@@ -383,7 +383,7 @@ Output written to architecture.md
 ╰───────────────────────────────────────────────────────╯
 ```
 
-### Example 4: Help Screen
+### Example 4: help screen
 
 ```
 repo-map — Professional repository analysis           v2.1.0
@@ -418,14 +418,14 @@ EXAMPLES
   → codebuff.com/docs   Full documentation
 ```
 
-### Example 5: Scanning Phase
+### Example 5: scanning phase
 
 ```
 ⠋ Scanning my-project...      (updating in place via \r)
 ✓ Scanned my-project — 42 files, 12 directories
 ```
 
-### Example 6: Analyzing Phase
+### Example 6: analyzing phase
 
 ```
 ⠙ Analyzing...                 (updating in place via \r)
@@ -434,7 +434,7 @@ EXAMPLES
 
 ---
 
-## 11. Rendering Pipeline Specification
+## 11. Rendering pipeline specification
 
 ### Architecture
 
@@ -468,9 +468,9 @@ interface TextStyle {
 ```
 
 The IR is:
-- **Platform-independent** — no ANSI codes, no terminal assumptions
-- **Testable** — simple array of typed objects
-- **Composable** — screens return `Line[]`, which can be concatenated
+- Platform-independent: no ANSI codes, no terminal assumptions
+- Testable: simple array of typed objects
+- Composable: screens return `Line[]`, which can be concatenated
 
 ### Layout Stage
 
@@ -515,7 +515,7 @@ The renderer:
 
 ---
 
-## 12. Animation Manager Specification
+## 12. Animation manager specification
 
 ### Architecture
 
@@ -566,27 +566,27 @@ class AnimationManager {
 
 ### Key Behaviors
 
-- **Single `setInterval`**: All animations share one timer at the configured interval
-- **No independent timers**: Individual animations never call `setTimeout` or `setInterval`
-- **`dt` delta-time**: Each `tick()` receives milliseconds since last tick for time-based animations
-- **Frame coalescing**: If an animation hasn't changed since last tick, it returns `null` — the manager skips the redraw
-- **Lifecycle**: `register()` / `unregister()` for dynamic add/remove during scanning phases
-- **Cleanup**: `stop()` clears the timer and calls `dispose()` on all registered animations
-- **CI behavior**: When `enabled: false`, the manager never starts the timer — animations return static frames on demand
+- Single `setInterval`: All animations share one timer at the configured interval
+- No independent timers: Individual animations never call `setTimeout` or `setInterval`
+- `dt` delta-time: Each `tick()` receives milliseconds since last tick for time-based animations
+- Frame coalescing: If an animation hasn't changed since last tick, it returns `null`. The manager skips the redraw
+- Lifecycle: `register()` / `unregister()` for dynamic add/remove during scanning phases
+- Cleanup: `stop()` clears the timer and calls `dispose()` on all registered animations
+- CI behavior: When `enabled: false`, the manager never starts the timer, animations return static frames on demand
 
-### Animation Types
+### Animation types
 
 | Type | State | tick() behavior |
 |------|-------|-----------------|
-| **Spinner** | Current frame index | Advances index, returns spinner char + text |
-| **Progress** | Current percentage | Returns bar if percentage changed, null otherwise |
-| **ETA** | Start time, elapsed | Returns time string every ~1s |
-| **Counters** | Counter values | Returns updated counter string when values change |
-| **Status** | Current status text | Returns text when status is updated externally |
+| Spinner | Current frame index | Advances index, returns spinner char + text |
+| Progress | Current percentage | Returns bar if percentage changed, null otherwise |
+| ETA | Start time, elapsed | Returns time string every ~1s |
+| Counters | Counter values | Returns updated counter string when values change |
+| Status | Current status text | Returns text when status is updated externally |
 
 ---
 
-## 13. Theme System Specification
+## 13. Theme system specification
 
 ### Interface
 
@@ -622,14 +622,14 @@ interface BorderChars {
 }
 ```
 
-### Theme Presets
+### Theme presets
 
 | Preset | Description |
 |--------|-------------|
-| **Default** | Full color, Unicode symbols, rounded borders |
-| **Monochrome** | No color (all `color()` returns empty string), Unicode symbols, rounded borders |
-| **High Contrast** | Bold text, increased spacing, `bg` color for boxes |
-| **Minimal** | No color, ASCII symbols, single-line borders, minimal spacing |
+| Default | Full color, Unicode symbols, rounded borders |
+| Monochrome | No color (all `color()` returns empty string), Unicode symbols, rounded borders |
+| High Contrast | Bold text, increased spacing, `bg` color for boxes |
+| Minimal | No color, ASCII symbols, single-line borders, minimal spacing |
 
 ### Resolution
 
@@ -644,9 +644,9 @@ function resolveTheme(options: { color: boolean; unicode: boolean }): Theme {
 
 ---
 
-## 14. ANSI Encapsulation Rules
+## 14. ANSI encapsulation rules
 
-### Forbidden Patterns
+### Forbidden patterns
 
 ```typescript
 // ❌ FORBIDDEN — Direct ANSI in components
@@ -660,7 +660,7 @@ const RED = '\x1b[31m';
 if (colorEnabled()) { output += '\x1b[32m'; }
 ```
 
-### Allowed Patterns
+### Allowed patterns
 
 ```typescript
 // ✅ ALLOWED — Via theme
@@ -680,9 +680,9 @@ manager.start();
 
 The **only** modules that may emit ANSI escape sequences:
 
-1. `src/ui/theme/colors.ts` — Defines ANSI code mappings
-2. `src/ui/renderer.ts` — Applies ANSI codes to styled segments
-3. `src/ui/utils/ansi.ts` — Raw escape sequence utilities (cursor, clear, etc.)
+1. `src/ui/theme/colors.ts`: Defines ANSI code mappings
+2. `src/ui/renderer.ts`: Applies ANSI codes to styled segments
+3. `src/ui/utils/ansi.ts`: Raw escape sequence utilities (cursor, clear, etc.)
 
 All other modules (screens, primitives, animations) work with **semantic tokens** only.
 
@@ -690,18 +690,18 @@ All other modules (screens, primitives, animations) work with **semantic tokens*
 
 ## 15. Testing Principles
 
-### Test Types
+### Test types
 
 | Type | What | How |
 |------|------|-----|
-| **Snapshot** | Screen output | Compare `Line[]` IR against expected structure |
-| **Functional** | Primitive output | Assert specific lines contain expected content |
-| **Edge case** | Narrow/wide terminals | `setForcedWidth(40)` and verify compact layout |
-| **Color mode** | `--no-color` | Verify no ANSI codes in output |
-| **Unicode** | ASCII fallback | `setUnicodeSupport(false)` and verify ASCII chars |
-| **Animation** | Frame advancement | Verify `tick()` returns expected sequence |
+| Snapshot | Screen output | Compare `Line[]` IR against expected structure |
+| Functional | Primitive output | Assert specific lines contain expected content |
+| Edge case | Narrow/wide terminals | `setForcedWidth(40)` and verify compact layout |
+| Color mode | `--no-color` | Verify no ANSI codes in output |
+| Unicode | ASCII fallback | `setUnicodeSupport(false)` and verify ASCII chars |
+| Animation | Frame advancement | Verify `tick()` returns expected sequence |
 
-### Testing Utilities
+### Testing utilities
 
 ```typescript
 // Force terminal width for deterministic tests
@@ -721,7 +721,7 @@ expect(stdout()).not.toContain('\x1b[');  // No ANSI in --no-color mode
 
 ---
 
-## 16. File Structure (Refined)
+## 16. File structure (refined)
 
 ```
 src/ui/
