@@ -359,15 +359,15 @@ Run `npx tsx scripts/analyze-self.ts` to scan repo-map with itself.
 
 ## FAQ
 
-**Does it work with monorepos?** Yes. Run at the monorepo root or target a specific package.
+Does it work with monorepos? Yes. Run at the monorepo root or target a specific package.
 
-**Does it modify my code?** Never. Strictly read-only. No files are created, deleted, or modified.
+Does it modify my code? Never. Strictly read-only. No files are created, deleted, or modified.
 
-**What about private repos?** Scans your local filesystem only. No network requests. Nothing leaves your machine.
+What about private repos? It scans your local filesystem only. No network requests. Nothing leaves your machine.
 
-**Is the JSON output stable?** Yes. Versioned schema (`1.0.0`). Fields may be added but never removed without a major version.
+Is the JSON output stable? Yes. Versioned schema (`1.0.0`). Fields may be added but never removed without a major version.
 
-**How does this compare to `tree` or `cloc`?** `tree` shows structure. `cloc` counts lines. repo-map shows structure, tech stack, health scores, architecture analysis, and improvement suggestions. All in one command.
+How does this compare to `tree` or `cloc`? `tree` shows structure. `cloc` counts lines. repo-map shows structure, tech stack, health scores, architecture analysis, and improvement suggestions. All in one command.
 
 ---
 
